@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05070f" />
+    <script>
+      // 在首屏渲染前应用主题，避免刷新时出现明暗闪烁
+      (function () {
+        try {
+          var saved = localStorage.getItem('fxq:theme');
+          var theme =
+            saved === 'dark' || saved === 'light'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          document.documentElement.dataset.theme = theme;
+        } catch (error) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
+    <meta
+      name="description"
+      content="自动飞行棋可视化：2-4 人 AI 对弈，Expectimax 决策，完整回放与胜率统计。"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>自动飞行棋 · AI 对弈可视化</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
