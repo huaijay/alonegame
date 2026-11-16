@@ -17,7 +17,7 @@ export function EventLog({ log }: EventLogProps) {
   }, [lastId]);
 
   return (
-    <section className="panel">
+    <section className="panel event-log">
       <div className="panel-head">
         <h2 className="panel-title">事件日志</h2>
         <span className="panel-sub">{log.length} 条</span>

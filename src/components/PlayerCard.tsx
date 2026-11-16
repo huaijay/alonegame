@@ -15,7 +15,7 @@ interface PlayerCardProps {
 function planeLabel(pos: number): string {
   if (pos < 0) return '机库';
   if (pos === FINISH) return '归位';
-  if (pos > TRACK_LAST) return `终${pos - 51}`;
+  if (pos > TRACK_LAST) return `终${pos - TRACK_LAST}`;
   return `第${pos + 1}步`;
 }
 

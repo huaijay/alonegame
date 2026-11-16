@@ -16,7 +16,7 @@ import {
   trackAngle,
 } from '@/lib/game/board';
 import type { Seat, SeatMeta } from '@/lib/game/board';
-import { FINISH, TRACK_LAST } from '@/lib/game/types';
+import { FINISH, HOME_FIRST, TRACK_LAST } from '@/lib/game/types';
 import type { GameState } from '@/lib/game/types';
 import { useEffect, useRef } from 'react';
 
@@ -117,7 +117,7 @@ function buildPlacements(state: GameState): Placement[] {
         rotation = trackAngle(absolute) + 90;
         key = `track-${absolute}`;
       } else if (pos < FINISH) {
-        const [row0, col0] = HOME_LANES[seat][pos - 52];
+        const [row0, col0] = HOME_LANES[seat][pos - HOME_FIRST];
         x = (col0 + 0.5) * CELL;
         y = (row0 + 0.5) * CELL;
         rotation = homeAngle(seat, pos) + 90;
@@ -485,9 +485,13 @@ export function Board({ state, activePlayer, activePlane, pulse }: BoardProps) {
   const pulseColor = pulse ? PULSE_COLORS[pulse.tone] ?? SEAT_META[pulse.seat].color : null;
 
   return (
+    // why：显式声明固有尺寸——无 width/height 属性的 svg 固有尺寸会退化为 300×150，
+    // 无法配合 CSS 的 max-width/max-height 做「宽高中取小」的等比缩放
     <svg
       className="board-svg"
       viewBox={`0 0 ${BOARD_SIZE} ${BOARD_SIZE}`}
+      width={BOARD_SIZE}
+      height={BOARD_SIZE}
       role="img"
       aria-label="自动飞行棋棋盘"
     >

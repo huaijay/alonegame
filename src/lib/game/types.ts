@@ -3,16 +3,16 @@ import type { Seat } from './board';
 /**
  * 飞机位置编码：
  * -1     停在机库
- * 0..51  环形跑道上的相对步数（相对本座位起点）
- * 52..56 终点跑道（由外向内）
- * 57     已归位
+ * 0..50  环形跑道上的相对步数（相对本座位起点，绕行一圈 51 格）
+ * 51..55 终点跑道（由外向内）
+ * 56     已归位
  */
 export type PlanePos = number;
 
-/** 相对步数常量 */
-export const TRACK_LAST = 51;
-export const HOME_FIRST = 52;
-export const FINISH = 57;
+/** 相对步数常量：跑道 51 格（52 格外圈中本座位的入口前一格不落脚）， 终点跑道 5 格 + 归位 */
+export const TRACK_LAST = 50;
+export const HOME_FIRST = 51;
+export const FINISH = 56;
 export const PLANES_PER_PLAYER = 4;
 
 /** 单局配置 */

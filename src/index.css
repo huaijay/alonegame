@@ -5,6 +5,10 @@
 :root {
   color-scheme: dark;
 
+  /* 页面最小画幅：低于该值不再压缩布局，改为出现滚动条（宽度、高度的单一事实源） */
+  --min-page-width: 1100px;
+  --min-page-height: 660px;
+
   --bg: #04060d;
   --bg-glow-1: rgba(56, 232, 255, 0.13);
   --bg-glow-2: rgba(255, 79, 216, 0.1);
@@ -108,11 +112,14 @@
 html,
 body,
 #root {
-  min-height: 100%;
+  /* 定值高度（而非 min-height）：为子级的 flex/百分比高度提供确定的参照 */
+  height: 100%;
 }
 
 body {
   margin: 0;
+  /* why：min-width 保证窗口过窄时出现横向滚动条而非压缩布局，且 max-width 居中依然正确 */
+  min-width: var(--min-page-width);
   color: var(--ink);
   font-family: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, -apple-system,
     "Segoe UI", sans-serif;
@@ -161,10 +168,17 @@ body::before {
 .app-shell {
   max-width: 1680px;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  padding: 20px 20px 24px;
+  /* 高度铺满视口；低于最小高度时由 min-height 兜底，页面出现纵向滚动条 */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: var(--min-page-height);
 }
 
 .app-header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -234,8 +248,11 @@ body::before {
   display: grid;
   /* 棋盘为主视觉：主列吃掉剩余宽度，侧栏固定成决策/日志/统计 */
   grid-template-columns: minmax(0, 1fr) 366px;
+  /* 行高吃掉 header 之外的剩余高度；minmax(0,1fr) 允许两列内容各自消化溢出 */
+  grid-template-rows: minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  flex: 1;
+  min-height: 0;
 }
 
 .col-main {
@@ -249,21 +266,17 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* why：侧栏内容天然高度可能超出可用高度，内部滚动避免把整页撑出滚动条 */
+  min-height: 0;
+  overflow-y: auto;
 }
 
-/* 四大基地式座位条：按座位数均分一行，窄屏折成两列 */
+/* 四大基地式座位条：按座位数均分一行 */
 .seat-rail {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   gap: 12px;
-}
-
-@media (max-width: 720px) {
-  .seat-rail {
-    grid-auto-flow: row;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* 侧栏收起后主列铺满，棋盘获得最大画幅 */
@@ -331,23 +344,6 @@ body::before {
 .side-dock:hover {
   padding-right: 11px;
   box-shadow: -16px 0 44px rgba(56, 232, 255, 0.22);
-}
-
-@media (max-width: 1180px) {
-  .game-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .col-side {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    align-items: start;
-  }
-}
-
-@media (max-width: 940px) {
-  .app-shell {
-    padding: 16px 14px 32px;
-  }
 }
 
 /* ------------------------------------------------------------------ 面板 */
@@ -526,6 +522,11 @@ body::before {
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   position: relative;
   overflow: hidden;
+  /* 棋盘行吃掉主列剩余高度，图例与状态行保持固有高度 */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .board-card::before {
@@ -539,8 +540,13 @@ body::before {
 
 .board-svg {
   display: block;
-  width: 100%;
+  /* why：svg 具备显式固有尺寸（Board.tsx 中 width/height），配合双向 max 约束即可
+     在「可用宽度」与「可用高度」中取较小者等比缩放；高度不定时退化为按宽度铺满 */
+  width: auto;
   height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  place-self: center;
   position: relative;
   z-index: 1;
   border-radius: 18px;
@@ -990,6 +996,20 @@ body::before {
 
 /* ------------------------------------------------------------------ 日志 */
 
+/* 事件日志吃掉侧栏剩余高度：窗口越高，可视日志越长 */
+.event-log {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-log .log-list {
+  flex: 1;
+  height: auto;
+  min-height: 160px;
+}
+
 .log-list {
   height: 340px;
   overflow-y: auto;
@@ -1105,12 +1125,6 @@ input[type="range"]::-webkit-slider-thumb {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: 22px;
   align-items: stretch;
-}
-
-@media (max-width: 980px) {
-  .setup-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .setup-card {

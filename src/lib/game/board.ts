@@ -1,3 +1,5 @@
+import { HOME_FIRST } from './types';
+
 /**
  * 棋盘几何定义（纯数据，无渲染依赖）
  *
@@ -41,8 +43,8 @@ export const SEAT_META: readonly SeatMeta[] = [
  *
  * why：十字加宽为 5 格后，主环贴住臂外缘（行/列 5 与 9），终点跑道居中（行/列 7），
  * 两者之间自然留出一整行空隙，满足「终点格不与外圈贴连」的布局要求。
- * 环保持 52 格与四重旋转对称，索引 1/14/27/40（起点）与 13/26/39/0（飞行格）
- * 的坐标与旧版逐格一致，因此 START_INDEX、FLIGHT_OFFSET 及全部规则逻辑无需改动。
+ * 环保持 52 格与四重旋转对称；起点取索引 2/15/28/41（紧贴各机库外缘的外圈格），
+ * 终点入口为起点 + 50 步 = 索引 0/13/26/39（各臂中线端点，与终点跑道贴边）。
  */
 export const TRACK: readonly (readonly [number, number])[] = [
   [7, 0],
@@ -63,10 +65,16 @@ export const TRACK: readonly (readonly [number, number])[] = [
   [8, 0],
 ];
 
-/** 每个座位的起跑格在环形跑道上的绝对索引 */
-export const START_INDEX: readonly number[] = [1, 14, 27, 40];
+/**
+ * 每个座位的起跑格在环形跑道上的绝对索引
+ *
+ * why：取 2/15/28/41 而非 1/14/27/40——这两组相差一格，只有前者直接贴住机库外缘
+ * （红 [5,0]、黄 [0,9]、蓝 [9,14]、绿 [14,5]），满足「起飞格与机场贴边」的布局要求；
+ * 相应地绕行一圈为 51 格（TRACK_LAST = 50），终点入口恰落在各臂中线端点。
+ */
+export const START_INDEX: readonly number[] = [2, 15, 28, 41];
 
-/** 飞行格相对起点的步数（四个座位均为 12，正好落在各臂转角处） */
+/** 飞行格相对起点的步数（四个座位均为 12，落在下一座位的终点入口旁） */
 export const FLIGHT_OFFSET = 12;
 
 /** 各座位终点跑道 5 格坐标（由外向内） */
@@ -137,7 +145,8 @@ export function trackAngle(index: number): number {
 /** 终点跑道格的行进方向角 */
 export function homeAngle(seat: Seat, relative: number): number {
   const lane = HOME_LANES[seat]!;
-  const offset = relative - 52;
+  // 终点跑道首格的相对步数即 HOME_FIRST（types 单一事实源），偏移量从它起算，勿用环长等魔法数字推导
+  const offset = relative - HOME_FIRST;
   const current = lane[Math.min(offset, lane.length - 1)]!;
   const next = offset < lane.length - 1 ? lane[offset + 1]! : FINISH_CELLS[seat]!;
   return angleBetween(current, next);

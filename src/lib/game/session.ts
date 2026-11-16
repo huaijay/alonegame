@@ -3,6 +3,7 @@ import { chooseMove } from './ai/expectimax';
 import type { EvaluationBreakdown } from './ai/evaluate';
 import { applyMove, createInitialState, getLegalMoves, passTurn } from './rules';
 import { createRng, rollDice } from './rng';
+import { HOME_FIRST } from './types';
 import type { GameConfig, GameState, MoveStep, PlanePos } from './types';
 
 /** 日志色调，决定前端配色 */
@@ -482,7 +483,7 @@ export class GameSession {
         this.pushLog(this.actingPlayer, `${name} 触发飞行格，飞跃 +12`, 'fly');
         break;
       case 'home':
-        this.pushLog(this.actingPlayer, `${name} 进入终点跑道第 ${step.to - 51} 格`, 'move');
+        this.pushLog(this.actingPlayer, `${name} 进入终点跑道第 ${step.to - HOME_FIRST + 1} 格`, 'move');
         break;
       case 'finish':
         this.pushLog(this.actingPlayer, `${name} 精确归位`, 'finish');
