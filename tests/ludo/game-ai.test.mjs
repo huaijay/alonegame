@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { chooseMove } from '../src/lib/game/ai/expectimax.ts';
-import { breakdownOf, createEvaluator, evaluate, evaluateAll } from '../src/lib/game/ai/evaluate.ts';
-import { applyMove, getLegalMoves, landingPosition, passTurn } from '../src/lib/game/rules.ts';
-import { createRng, rollDice } from '../src/lib/game/rng.ts';
-import { FINISH } from '../src/lib/game/types.ts';
+import { chooseMove } from '../../src/games/ludo/engine/ai/expectimax.ts';
+import { breakdownOf, createEvaluator, evaluate, evaluateAll } from '../../src/games/ludo/engine/ai/evaluate.ts';
+import { applyMove, getLegalMoves, landingPosition, passTurn } from '../../src/games/ludo/engine/rules.ts';
+import { createRng, rollDice } from '../../src/games/ludo/engine/rng.ts';
+import { FINISH } from '../../src/games/ludo/engine/types.ts';
 import { fixtures, makeState } from './ai-fixtures.mjs';
 
 // 修改前正式规则的穷举落点快照，防止新版搜索与正式规则共用 helper 后彼此自证。

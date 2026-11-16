@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { LogEntry } from '@/lib/game/session';
+import type { LogEntry } from '@/games/ludo/engine/session';
 
 interface EventLogProps {
   log: LogEntry[];

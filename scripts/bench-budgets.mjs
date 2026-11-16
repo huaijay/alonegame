@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { chooseMove } from '../src/lib/game/ai/expectimax.ts';
-import { getLegalMoves } from '../src/lib/game/rules.ts';
-import { fixtures } from '../tests/ai-fixtures.mjs';
+import { chooseMove } from '../src/games/ludo/engine/ai/expectimax.ts';
+import { getLegalMoves } from '../src/games/ludo/engine/rules.ts';
+import { fixtures } from '../tests/ludo/ai-fixtures.mjs';
 
 const outputIndex = process.argv.indexOf('--out');
 const output = resolve(outputIndex < 0 ? '.ai-work/budget-behavior.json' : process.argv[outputIndex + 1]);

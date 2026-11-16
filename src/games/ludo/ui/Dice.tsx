@@ -1,4 +1,4 @@
-import { SEAT_META } from '@/lib/game/board';
+import { SEAT_META } from '@/games/ludo/engine/board';
 
 interface DiceProps {
   value: number | null;

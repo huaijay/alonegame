@@ -1,4 +1,4 @@
-import { createInitialState } from '../src/lib/game/rules.ts';
+import { createInitialState } from '../../src/games/ludo/engine/rules.ts';
 
 export function makeState(seats, planes, current = 0, sixStreak = 0) {
   return { ...createInitialState(seats), planes: planes.map((row) => [...row]), current, sixStreak };

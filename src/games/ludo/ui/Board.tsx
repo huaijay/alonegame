@@ -14,10 +14,10 @@ import {
   homeAngle,
   toTrackIndex,
   trackAngle,
-} from '@/lib/game/board';
-import type { Seat, SeatMeta } from '@/lib/game/board';
-import { FINISH, HOME_FIRST, TRACK_LAST } from '@/lib/game/types';
-import type { GameState } from '@/lib/game/types';
+} from '@/games/ludo/engine/board';
+import type { Seat, SeatMeta } from '@/games/ludo/engine/board';
+import { FINISH, HOME_FIRST, TRACK_LAST } from '@/games/ludo/engine/types';
+import type { GameState } from '@/games/ludo/engine/types';
 import { useEffect, useRef } from 'react';
 
 interface BoardProps {

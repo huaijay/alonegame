@@ -1,7 +1,7 @@
-import { SEAT_META } from '@/lib/game/board';
-import type { AiDecisionView } from '@/lib/game/session';
-import type { GameState } from '@/lib/game/types';
-import type { EvaluationBreakdown } from '@/lib/game/ai/evaluate';
+import { SEAT_META } from '@/games/ludo/engine/board';
+import type { AiDecisionView } from '@/games/ludo/engine/session';
+import type { GameState } from '@/games/ludo/engine/types';
+import type { EvaluationBreakdown } from '@/games/ludo/engine/ai/evaluate';
 
 interface AiPanelProps {
   ai: AiDecisionView | null;

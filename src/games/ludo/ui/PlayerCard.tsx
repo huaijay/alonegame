@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
-import { SEAT_META } from '@/lib/game/board';
-import { FINISH, TRACK_LAST } from '@/lib/game/types';
-import type { GameState } from '@/lib/game/types';
-import { finishedCount, progressOf } from '@/lib/game/rules';
+import { SEAT_META } from '@/games/ludo/engine/board';
+import { FINISH, TRACK_LAST } from '@/games/ludo/engine/types';
+import type { GameState } from '@/games/ludo/engine/types';
+import { finishedCount, progressOf } from '@/games/ludo/engine/rules';
 
 interface PlayerCardProps {
   state: GameState;

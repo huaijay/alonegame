@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { SEAT_META } from '@/lib/game/board';
-import type { Seat } from '@/lib/game/board';
-import { createInitialState } from '@/lib/game/rules';
-import type { GameConfig } from '@/lib/game/types';
-import { Board } from '@/components/Board';
+import { SEAT_META } from '@/games/ludo/engine/board';
+import type { Seat } from '@/games/ludo/engine/board';
+import { createInitialState } from '@/games/ludo/engine/rules';
+import type { GameConfig } from '@/games/ludo/engine/types';
+import { Board } from '@/games/ludo/ui/Board';
 
 interface SetupScreenProps {
   onStart: (config: GameConfig) => void;

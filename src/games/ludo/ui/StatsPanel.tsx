@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { SEAT_META } from '@/lib/game/board';
-import type { Seat } from '@/lib/game/board';
-import type { WinStats } from '@/lib/game/stats';
-import { simulateGame } from '@/lib/game/simulate';
-import type { BatchResult } from '@/lib/game/simulate';
+import { SEAT_META } from '@/games/ludo/engine/board';
+import type { Seat } from '@/games/ludo/engine/board';
+import type { WinStats } from '@/games/ludo/engine/stats';
+import { simulateGame } from '@/games/ludo/engine/simulate';
+import type { BatchResult } from '@/games/ludo/engine/simulate';
 
 interface StatsPanelProps {
   seats: Seat[];

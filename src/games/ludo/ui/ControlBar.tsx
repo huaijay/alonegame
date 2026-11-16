@@ -1,4 +1,4 @@
-import type { SessionStatus } from '@/lib/game/session';
+import type { SessionStatus } from '@/games/ludo/engine/session';
 
 interface ControlBarProps {
   status: SessionStatus;

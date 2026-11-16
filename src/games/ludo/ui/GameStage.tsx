@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { SEAT_META } from '@/lib/game/board';
-import { GameSession } from '@/lib/game/session';
-import type { LogEntry, SessionSnapshot } from '@/lib/game/session';
-import type { GameConfig, GameState } from '@/lib/game/types';
-import { loadStats, recordResult, resetStats } from '@/lib/game/stats';
-import type { WinStats } from '@/lib/game/stats';
-import { Board } from '@/components/Board';
-import type { BoardPulse } from '@/components/Board';
-import { ControlBar } from '@/components/ControlBar';
-import { ReplayBar } from '@/components/ReplayBar';
-import { PlayerCard } from '@/components/PlayerCard';
-import { AiPanel } from '@/components/AiPanel';
-import { EventLog } from '@/components/EventLog';
-import { StatsPanel } from '@/components/StatsPanel';
-import { Dice } from '@/components/Dice';
+import { SEAT_META } from '@/games/ludo/engine/board';
+import { GameSession } from '@/games/ludo/engine/session';
+import type { LogEntry, SessionSnapshot } from '@/games/ludo/engine/session';
+import type { GameConfig, GameState } from '@/games/ludo/engine/types';
+import { loadStats, recordResult, resetStats } from '@/games/ludo/engine/stats';
+import type { WinStats } from '@/games/ludo/engine/stats';
+import { Board } from '@/games/ludo/ui/Board';
+import type { BoardPulse } from '@/games/ludo/ui/Board';
+import { ControlBar } from '@/games/ludo/ui/ControlBar';
+import { ReplayBar } from '@/games/ludo/ui/ReplayBar';
+import { PlayerCard } from '@/games/ludo/ui/PlayerCard';
+import { AiPanel } from '@/games/ludo/ui/AiPanel';
+import { EventLog } from '@/games/ludo/ui/EventLog';
+import { StatsPanel } from '@/games/ludo/ui/StatsPanel';
+import { Dice } from '@/games/ludo/ui/Dice';
 
 interface GameStageProps {
   config: GameConfig;

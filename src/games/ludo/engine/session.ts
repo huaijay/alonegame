@@ -1,4 +1,4 @@
-import { SEAT_META } from '../game/board';
+import { SEAT_META } from './board';
 import { chooseMove } from './ai/expectimax';
 import type { EvaluationBreakdown } from './ai/evaluate';
 import { applyMove, createInitialState, getLegalMoves, passTurn } from './rules';

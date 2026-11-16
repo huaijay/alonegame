@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameConfig } from '@/lib/game/types';
-import { GameStage } from '@/components/GameStage';
-import { SetupScreen } from '@/components/SetupScreen';
+import { GAMES } from './registry';
 
 type Theme = 'dark' | 'light';
 
@@ -22,6 +20,16 @@ function readInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
+/**
+ * 从 URL hash 解析当前激活的游戏 id（如 #/ludo）
+ *
+ * @returns 游戏 id；无 hash 或 id 未注册时返回 null（回到大厅）
+ */
+function readActiveGameId(): string | null {
+  const match = /^#\/([a-z0-9-]+)$/.exec(window.location.hash);
+  return match?.[1] ?? null;
+}
+
 /** 主题图标：太阳 / 月亮 */
 function ThemeIcon({ theme }: { theme: Theme }) {
   return theme === 'dark' ? (
@@ -36,10 +44,10 @@ function ThemeIcon({ theme }: { theme: Theme }) {
   );
 }
 
-/** 应用入口：配置页与对局页之间切换，并管理深浅主题 */
+/** 应用外壳：游戏大厅与各游戏之间切换，统一管理深浅主题 */
 export default function App() {
-  const [config, setConfig] = useState<GameConfig | null>(null);
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const [activeId, setActiveId] = useState<string | null>(readActiveGameId);
 
   /** 将主题写到根节点并持久化 */
   useEffect(() => {
@@ -50,6 +58,27 @@ export default function App() {
       // 写入失败不影响当前会话的主题切换
     }
   }, [theme]);
+
+  /** 监听浏览器前进/后退，保证 hash 与大厅状态同步 */
+  useEffect(() => {
+    const onHashChange = () => setActiveId(readActiveGameId());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const active = GAMES.find((game) => game.id === activeId) ?? null;
+
+  /** 打开游戏：写入 hash，刷新或分享链接后仍停留在对应游戏 */
+  const openGame = (id: string) => {
+    window.location.hash = '#/' + id;
+    setActiveId(id);
+  };
+
+  /** 返回大厅：清除 hash 并同步状态 */
+  const backToLobby = () => {
+    window.history.pushState(null, '', window.location.pathname + window.location.search);
+    setActiveId(null);
+  };
 
   return (
     <div className="app-shell">
@@ -67,11 +96,16 @@ export default function App() {
             </svg>
           </span>
           <div>
-            <p className="eyebrow">AERO CHESS</p>
-            <h1 className="app-title">自动飞行棋</h1>
+            <p className="eyebrow">{active ? active.eyebrow : 'GAME HUB'}</p>
+            <h1 className="app-title">{active ? active.name : '游戏中心'}</h1>
           </div>
         </div>
         <div className="header-meta">
+          {active && (
+            <button type="button" className="theme-toggle" onClick={backToLobby}>
+              ← 返回大厅
+            </button>
+          )}
           <button
             type="button"
             className="theme-toggle"
@@ -81,15 +115,42 @@ export default function App() {
             <ThemeIcon theme={theme} />
             {theme === 'dark' ? '浅色' : '深色'}
           </button>
-          <span className="badge">AI · Expectimax</span>
-          <span className="badge badge-dim">2-4 人自动对弈</span>
+          {active ? (
+            active.badges.map((badge, index) => (
+              <span key={badge} className={index === 0 ? 'badge' : 'badge badge-dim'}>
+                {badge}
+              </span>
+            ))
+          ) : (
+            <span className="badge badge-dim">AI 对弈合集</span>
+          )}
         </div>
       </header>
 
-      {config ? (
-        <GameStage config={config} onExit={() => setConfig(null)} />
+      {active ? (
+        <active.component />
       ) : (
-        <SetupScreen onStart={setConfig} />
+        <section className="lobby">
+          {GAMES.map((game) => (
+            <button
+              key={game.id}
+              type="button"
+              className="lobby-card"
+              onClick={() => openGame(game.id)}
+            >
+              <p className="eyebrow">{game.eyebrow}</p>
+              <h2 className="lobby-card-title">{game.name}</h2>
+              <p className="lobby-card-desc">{game.description}</p>
+              <div className="lobby-card-tags">
+                {game.badges.map((badge) => (
+                  <span key={badge} className="badge badge-dim">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </section>
       )}
     </div>
   );

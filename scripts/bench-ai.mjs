@@ -2,11 +2,11 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
-import { chooseMove } from '../src/lib/game/ai/expectimax.ts';
-import { createEvaluator } from '../src/lib/game/ai/evaluate.ts';
-import { applyMove, createInitialState, getLegalMoves, passTurn } from '../src/lib/game/rules.ts';
-import { createRng, rollDice } from '../src/lib/game/rng.ts';
-import { fixtures } from '../tests/ai-fixtures.mjs';
+import { chooseMove } from '../src/games/ludo/engine/ai/expectimax.ts';
+import { createEvaluator } from '../src/games/ludo/engine/ai/evaluate.ts';
+import { applyMove, createInitialState, getLegalMoves, passTurn } from '../src/games/ludo/engine/rules.ts';
+import { createRng, rollDice } from '../src/games/ludo/engine/rng.ts';
+import { fixtures } from '../tests/ludo/ai-fixtures.mjs';
 
 function argument(name, fallback) {
   const index = process.argv.indexOf('--' + name);
