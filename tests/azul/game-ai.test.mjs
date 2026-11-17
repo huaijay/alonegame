@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { chooseMove } from '../../src/games/azul/engine/ai/search.ts';
 import { WIN_VALUE, breakdownOf, evaluateAll } from '../../src/games/azul/engine/ai/evaluate.ts';
-import { advanceState, createInitialState, getLegalMoves, startNextRound } from '../../src/games/azul/engine/rules.ts';
+import { advanceState, applyMove, createInitialState, getLegalMoves, startNextRound } from '../../src/games/azul/engine/rules.ts';
 import { createRng } from '../../src/games/azul/engine/rng.ts';
 import { fixtures, makeState } from './ai-fixtures.mjs';
+import { repeatsPosition } from './reference-policy.mjs';
 
 const unlimited = { depth: 2, budgetMs: 1e9, nodeBudget: 1e9 };
 // 4 人夹具分支因子大，枚举对拍用深度 1 控制规模
@@ -24,20 +26,41 @@ function freezeState(state) {
   return deep(structuredClone(state));
 }
 
-// 不使用缓存、快照复用或搜索内部函数，直接用正式规则枚举完整 Max-n 博弈树。
+// 独立使用带完整动画的正式规则，未知下一轮供应是搜索边界。
+function afterMove(state, move) {
+  const next = applyMove(state, move).state;
+  return next.phase === 'roundEnd' && next.bag.every((count) => count === 0)
+    && next.discard.every((count) => count === 0) ? startNextRound(next) : next;
+}
+
+function canonicalMoves(state) {
+  return getLegalMoves(state).sort((a, b) => {
+    if (a.source !== b.source) {
+      if (a.source === state.factoryCount) return 1;
+      if (b.source === state.factoryCount) return -1;
+      for (let color = 0; color < 5; color += 1) {
+        const difference = state.factories[a.source][color] - state.factories[b.source][color];
+        if (difference) return difference;
+      }
+    }
+    return a.color - b.color || (a.row < 0 ? 5 : a.row) - (b.row < 0 ? 5 : b.row);
+  });
+}
+
 function oracle(state, depth) {
   if (state.phase === 'gameEnd') {
-    const best = Math.max(...state.players.map((board) => board.score));
-    return state.players.map((board) => (board.score === best ? WIN_VALUE : -WIN_VALUE));
+    return state.seats.map((seat) => seat === state.winner ? WIN_VALUE : -WIN_VALUE);
   }
-  if (depth === 0) return evaluateAll(state);
+  if (depth === 0 || state.phase === 'roundEnd') return evaluateAll(state);
   const player = state.current;
   let best = null;
-  for (const move of getLegalMoves(state)) {
-    const child = oracle(advanceState(state, move), depth - 1);
+  for (const move of canonicalMoves(state)) {
+    const after = afterMove(state, move);
+    if (repeatsPosition(state, move, after)) continue;
+    const child = oracle(after, depth - 1);
     if (!best || child[player] > best[player] + 1e-9) best = child;
   }
-  return best;
+  return best ?? evaluateAll(state);
 }
 
 function checkAgainstOracle(state, depth) {
@@ -51,20 +74,29 @@ function checkAgainstOracle(state, depth) {
   assert.equal(decision.requestedDepth, depth);
   assert.equal(decision.interrupted, false);
   assert.equal(decision.candidates.length, moves.length);
+  const hasProgress = moves.some((move) => !repeatsPosition(state, move, afterMove(state, move)));
   for (const move of moves) {
     const candidate = decision.candidates.find((item) => sameMove(item.move, move));
     assert.ok(candidate, `缺少候选 ${JSON.stringify(move)}`);
-    const expected = oracle(advanceState(state, move), depth)[state.current];
+    const after = afterMove(state, move);
+    const expected = hasProgress && repeatsPosition(state, move, after)
+      ? -WIN_VALUE - 1 : oracle(after, depth)[state.current];
     close(candidate.value, expected, `深度 ${depth} 行动 ${JSON.stringify(move)}`);
   }
   // 决策必须等于稳定排序（同分保持枚举顺序）后的首个候选
-  const sorted = [...decision.candidates].sort((a, b) => b.value - a.value);
+  const sorted = moves.map((move) => decision.candidates.find((item) => sameMove(item.move, move)))
+    .sort((a, b) => Math.abs(b.value - a.value) > 1e-9 ? b.value - a.value : 0);
   assert.deepEqual(decision.move, sorted[0].move);
   close(decision.value, sorted[0].value);
 }
 
 test('完整浅层搜索与独立 Max-n 枚举一致（2、4 人夹具）', () => {
   fixtures.forEach(({ state }, index) => checkAgainstOracle(state, FIXTURE_DEPTH[index]));
+});
+
+test('可复现的末砖循环按完整正式状态判断，与独立枚举保持一致', () => {
+  const state = JSON.parse(readFileSync(new URL('./stalled-round.json', import.meta.url), 'utf8'));
+  for (const depth of [0, 1, 2]) checkAgainstOracle(state, depth);
 });
 
 test('可复现实际对局中的真实局面符合枚举', () => {
@@ -130,7 +162,7 @@ test('零节点和零时间保留完整、稳定的静态候选排序', () => {
   // 静态候选值与逐项 breakdown 完全一致
   const root = state.current;
   for (const move of getLegalMoves(state)) {
-    const expected = breakdownOf(advanceState(state, move), root).total;
+    const expected = breakdownOf(afterMove(state, move), root).total;
     const candidate = baseline.candidates.find((item) => sameMove(item.move, move));
     close(candidate.value, expected, `静态候选 ${JSON.stringify(move)}`);
   }

@@ -22,6 +22,25 @@ const DEPTH_OPTIONS: { value: number; label: string; hint: string }[] = [
   { value: 3, label: '深度', hint: '向前看 3 个回合，思考更久' },
 ];
 
+/** 轮次上限候选：0 表示不限（标准规则），其余为该轮结算后直接终局 */
+const ROUND_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: '不限' },
+  { value: 3, label: '3 轮' },
+  { value: 5, label: '5 轮' },
+  { value: 8, label: '8 轮' },
+];
+
+/** 生成 0 ~ 999999999 的随机种子 */
+function randomSeed(): number {
+  return Math.floor(Math.random() * 1_000_000_000);
+}
+
+/** 解析种子输入；为空或非法时回退到新的随机种子 */
+function parseSeed(text: string): number {
+  const value = Math.floor(Number(text));
+  return text.trim() !== '' && Number.isFinite(value) && value >= 0 ? value : randomSeed();
+}
+
 const RULES: { title: string; text: string }[] = [
   { title: '拿砖', text: '轮到谁就从某个工厂盘或中央区整色拿走全部花砖' },
   { title: '余砖', text: '工厂盘被拿后剩下的砖全部移入中央区' },
@@ -32,23 +51,26 @@ const RULES: { title: string; text: string }[] = [
   { title: '终局', text: '有人拼出完整墙行即终局：满行 +6 / 满列 +2 / 集齐一色 +10' },
 ];
 
-/** 开局配置页：选择人数、停顿时间与 AI 搜索深度 */
+/** 开局配置页：选择人数、轮次上限、停顿时间、AI 搜索深度与随机种子 */
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [count, setCount] = useState(2);
+  const [rounds, setRounds] = useState(0);
   const [turnDelayMs, setTurnDelayMs] = useState(900);
   const [aiDepth, setAiDepth] = useState(2);
+  const [seedText, setSeedText] = useState(() => String(randomSeed()));
 
   const seats = SEAT_SETS[count];
   // 预览使用确定性初始局面（不传随机源），保证每次进入配置页展示一致
   const preview = useMemo(() => createInitialState(seats), [seats]);
 
-  /** 以当前配置开始一局（每次使用新的随机种子） */
+  /** 以当前配置开始（种子可手填，留空则现场随机） */
   const start = () => {
     onStart({
       seats,
       turnDelayMs,
       aiDepth,
-      seed: Math.floor(Math.random() * 1_000_000_000),
+      seed: parseSeed(seedText),
+      rounds,
     });
   };
 
@@ -97,6 +119,31 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
         <div className="option-block">
           <div className="option-label">
+            <span>轮次上限</span>
+            <span className="option-value">{rounds === 0 ? '不限' : `${rounds} 轮`}</span>
+          </div>
+          <div className="seg" role="group" aria-label="轮次上限">
+            {ROUND_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className="seg-item"
+                data-active={rounds === option.value}
+                onClick={() => setRounds(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="option-hint">
+            {rounds === 0
+              ? '标准规则：任一玩家完成一整行花砖即进入终局结算。'
+              : `最多进行 ${rounds} 轮，该轮结算后直接终局；若提前有人完成一整行，仍按标准规则提前结束。`}
+          </p>
+        </div>
+
+        <div className="option-block">
+          <div className="option-label">
             <span>每步停顿</span>
             <span className="option-value">{turnDelayMs} ms</span>
           </div>
@@ -132,6 +179,30 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
           </div>
           <p className="option-hint">
             {DEPTH_OPTIONS.find((option) => option.value === aiDepth)?.hint}
+          </p>
+        </div>
+
+        <div className="option-block">
+          <div className="option-label">
+            <span>随机种子</span>
+            <span className="option-value">可复现</span>
+          </div>
+          <div className="seed-row">
+            <input
+              className="seed-input"
+              type="number"
+              min={0}
+              step={1}
+              value={seedText}
+              onChange={(event) => setSeedText(event.target.value)}
+              aria-label="随机种子"
+            />
+            <button type="button" className="btn" onClick={() => setSeedText(String(randomSeed()))}>
+              换一个
+            </button>
+          </div>
+          <p className="option-hint">
+            同一种子会得到相同的补盘与砖袋序列；AI 决策受时间预算影响，同种子对局可能略有差异。
           </p>
         </div>
 

@@ -324,6 +324,19 @@ test('流通砖耗尽时按当前分数直接终局，避免死局', () => {
   assert.ok(next.factories.every((plate) => plate.every((value) => value === 0)));
 });
 
+test('轮次上限：跑满设定轮次后当轮结算即终局', () => {
+  let state = createInitialState([0, 2], createRng(7), 1);
+  assert.equal(state.maxRounds, 1);
+  // 依次取首个合法行动直到本轮供应耗尽，轮末结算应直接进入终局
+  let guard = 0;
+  while (state.phase === 'placing' && guard < 500) {
+    state = advanceState(state, getLegalMoves(state)[0], createRng(100 + guard));
+    guard += 1;
+  }
+  assert.equal(state.phase, 'gameEnd');
+  assert.notEqual(state.winner, null);
+});
+
 test('非 roundEnd 局面调用 startNextRound 原样返回', () => {
   const state = makeState({ phase: 'placing' });
   assert.equal(startNextRound(state), state);

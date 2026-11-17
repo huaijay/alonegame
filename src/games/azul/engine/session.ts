@@ -29,6 +29,8 @@ export interface AiCandidateView {
   move: Move;
   value: number;
   breakdown: EvaluationBreakdown;
+  /** 该行动会确定地回到原局面，AI 在存在正常替代时避免选择。 */
+  repeatsPosition?: true;
   chosen: boolean;
 }
 
@@ -111,7 +113,7 @@ export class GameSession {
   private state: GameState;
   private readonly rng: () => number;
   private queue: QueueItem[] = [];
-  private timer: number | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
   private status: SessionStatus = 'running';
   private phase: TurnPhase = 'idle';
   private actingPlayer = 0;
@@ -122,7 +124,7 @@ export class GameSession {
   private frames: ReplayFrame[] = [];
   private replayIndex: number | null = null;
   private replayPlaying = false;
-  private replayTimer: number | null = null;
+  private replayTimer: ReturnType<typeof setTimeout> | null = null;
   private speed = 1;
   private listeners = new Set<() => void>();
   private snapshot: SessionSnapshot;
@@ -137,7 +139,7 @@ export class GameSession {
   ) {
     this.config = config;
     this.rng = createRng(config.seed);
-    this.state = createInitialState(config.seats, this.rng);
+    this.state = createInitialState(config.seats, this.rng, config.rounds);
     this.frames.push(this.captureFrame('开局'));
     this.snapshot = this.buildSnapshot();
     this.log.push({
@@ -211,12 +213,15 @@ export class GameSession {
   restart(): void {
     this.clearTimer();
     this.clearReplayTimer();
-    this.state = createInitialState(this.config.seats, this.rng);
+    this.state = createInitialState(this.config.seats, this.rng, this.config.rounds);
     this.queue = [];
     this.status = 'running';
     this.phase = 'idle';
     this.activeStep = null;
     this.ai = null;
+    this.pendingMove = null;
+    this.finishedNotified = false;
+    this.actingPlayer = this.state.current;
     this.log = [];
     this.frames = [this.captureFrame('开局')];
     this.replayIndex = null;
@@ -278,7 +283,7 @@ export class GameSession {
 
   private runReplayTick(): void {
     this.clearReplayTimer();
-    this.replayTimer = window.setTimeout(() => {
+    this.replayTimer = globalThis.setTimeout(() => {
       if (!this.replayPlaying || this.replayIndex === null) return;
       if (this.replayIndex >= this.frames.length - 1) {
         this.replayPlaying = false;
@@ -293,14 +298,14 @@ export class GameSession {
 
   private clearReplayTimer(): void {
     if (this.replayTimer !== null) {
-      window.clearTimeout(this.replayTimer);
+      globalThis.clearTimeout(this.replayTimer);
       this.replayTimer = null;
     }
   }
 
   private clearTimer(): void {
     if (this.timer !== null) {
-      window.clearTimeout(this.timer);
+      globalThis.clearTimeout(this.timer);
       this.timer = null;
     }
   }
@@ -312,7 +317,7 @@ export class GameSession {
 
   private schedule(delay: number): void {
     this.clearTimer();
-    this.timer = window.setTimeout(() => this.tick(), delay);
+    this.timer = globalThis.setTimeout(() => this.tick(), delay);
   }
 
   private tick(): void {
@@ -346,7 +351,7 @@ export class GameSession {
 
     const decision = chooseMove(this.state, {
       depth: this.config.aiDepth,
-      // 实测深度 2 完整搜索约 140ms，预算放宽到 200ms 保证多数回合不被打断
+      // 界面预算允许较深搜索；时间用尽时采用上一完整迭代的决定。
       budgetMs: 200,
       nodeBudget: 120_000,
     });
@@ -362,6 +367,7 @@ export class GameSession {
         move: candidate.move,
         value: candidate.value,
         breakdown: candidate.breakdown,
+        ...(candidate.repeatsPosition ? { repeatsPosition: true as const } : {}),
         chosen: candidate.move === decision.move,
       })),
       nodes: decision.nodes,
@@ -374,16 +380,18 @@ export class GameSession {
     for (const step of result.steps) {
       this.queue.push({ kind: 'step', step });
     }
+    let finalState = result.state;
     if (result.state.phase === 'roundEnd') {
       // 轮末已随行动自动结算；此处补上开新轮的补盘呈现
       const next = startNextRound(result.state, this.rng);
+      finalState = next;
       this.queue.push({
         kind: 'step',
         step: { kind: 'refill', player: next.current, after: next },
       });
     }
     const seatName = SEAT_META[this.state.seats[player]].name;
-    this.pendingMove = { state: result.state };
+    this.pendingMove = { state: finalState };
     this.queue.push({ kind: 'frame', label: `第 ${result.state.round} 轮 · ${seatName} 拿砖` });
   }
 
@@ -414,6 +422,8 @@ export class GameSession {
       }
       case 'frame': {
         if (this.pendingMove) {
+          // 动画快照停在各事件发生时，回合轮转与终局标记以最终规则结果为准。
+          this.state = this.pendingMove.state;
           this.recordFrame(item.label ?? `第 ${this.state.round} 轮`);
           this.pendingMove = null;
         }

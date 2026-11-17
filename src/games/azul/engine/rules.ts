@@ -27,20 +27,29 @@ function createPlayerBoard(): PlayerBoard {
   };
 }
 
-/** 深拷贝对局状态：所有规则转移与 AI 搜索的副本都基于它 */
+/** 复制玩家板，供完整快照与轮末结算取得独占可写副本。 */
+function clonePlayerBoard(board: PlayerBoard): PlayerBoard {
+  return {
+    score: board.score,
+    rows: board.rows.map((row) => ({ ...row })),
+    wall: board.wall.map((line) => [...line]),
+    floor: [...board.floor],
+    hasFirstMarker: board.hasFirstMarker,
+  };
+}
+
+/**
+ * 深拷贝对局状态，生成相互独立的动画或回放快照。
+ * @param state 原始局面
+ * @returns 所有数组和玩家板都独立的新局面
+ */
 export function cloneState(state: GameState): GameState {
   return {
     ...state,
     seats: [...state.seats],
     factories: state.factories.map((plate) => [...plate]),
     center: [...state.center],
-    players: state.players.map((board) => ({
-      score: board.score,
-      rows: board.rows.map((row) => ({ ...row })),
-      wall: board.wall.map((line) => [...line]),
-      floor: [...board.floor],
-      hasFirstMarker: board.hasFirstMarker,
-    })),
+    players: state.players.map(clonePlayerBoard),
     bag: [...state.bag],
     discard: [...state.discard],
   };
@@ -59,7 +68,7 @@ interface DrawResult {
  * @param bag 袋中五色计数
  * @param discard 弃堆五色计数
  * @param count 需要抽取的砖数
- * @param rng 随机源；缺省时按色号轮转均匀抽取（AI 搜索与测试使用确定性模式）
+ * @param rng 随机源；缺省时按色号轮转均匀抽取（测试与预览使用确定性模式）
  * @returns 抽到的砖与新袋 / 新弃堆
  */
 function drawTiles(bag: number[], discard: number[], count: number, rng?: () => number): DrawResult {
@@ -138,8 +147,9 @@ function refillFactories(state: GameState, rng?: () => number): GameState {
  *
  * @param seats 参与座位
  * @param rng 随机源；缺省时初始供应按颜色顺序确定性生成（便于测试与预览）
+ * @param maxRounds 轮次上限；0 表示不限（标准规则）
  */
-export function createInitialState(seats: Seat[], rng?: () => number): GameState {
+export function createInitialState(seats: Seat[], rng?: () => number, maxRounds = 0): GameState {
   const factoryCount = FACTORY_COUNT[seats.length] ?? FACTORY_COUNT[2];
   const state: GameState = {
     seats: [...seats],
@@ -150,6 +160,7 @@ export function createInitialState(seats: Seat[], rng?: () => number): GameState
     players: seats.map(() => createPlayerBoard()),
     current: 0,
     round: 1,
+    maxRounds,
     bag: new Array<number>(TILE_COLORS).fill(TILES_PER_COLOR),
     discard: new Array<number>(TILE_COLORS).fill(0),
     phase: 'placing',
@@ -164,10 +175,7 @@ function canPlaceRow(board: PlayerBoard, row: number, color: TileColor): boolean
   const pattern = board.rows[row];
   if (pattern.count >= rowCapacity(row)) return false;
   if (pattern.color !== null && pattern.color !== color) return false;
-  for (let col = 0; col < WALL_SIZE; col += 1) {
-    if (wallColorOf(row, col) === color && board.wall[row][col]) return false;
-  }
-  return true;
+  return !board.wall[row][wallColOf(row, color)];
 }
 
 /**
@@ -178,21 +186,38 @@ function canPlaceRow(board: PlayerBoard, row: number, color: TileColor): boolean
  */
 export function getLegalMoves(state: GameState): Move[] {
   const board = state.players[state.current];
+  const allowedRows = new Int8Array(TILE_COLORS);
+  // 同色在不同工厂盘的放行条件相同，每次枚举只检查一遍玩家板。
+  for (let color = 0; color < TILE_COLORS; color += 1) {
+    for (let row = 0; row < WALL_SIZE; row += 1) {
+      if (canPlaceRow(board, row, color as TileColor)) allowedRows[color] |= 1 << row;
+    }
+  }
+
   const moves: Move[] = [];
   for (let source = 0; source <= state.factoryCount; source += 1) {
     const supply = source < state.factoryCount ? state.factories[source] : state.center;
-    for (const color of nonEmptyColors(supply)) {
+    for (let color = 0; color < TILE_COLORS; color += 1) {
+      if (supply[color] <= 0) continue;
       for (let row = 0; row < WALL_SIZE; row += 1) {
-        if (canPlaceRow(board, row, color)) moves.push({ source, color, row });
+        if ((allowedRows[color] & (1 << row)) !== 0) {
+          moves.push({ source, color: color as TileColor, row });
+        }
       }
-      moves.push({ source, color, row: -1 });
+      moves.push({ source, color: color as TileColor, row: -1 });
     }
   }
   return moves;
 }
 
-/** 墙格得分：横向连续数 + 纵向连续数 +（两向均成串时 +1） */
-function scoreForCell(wall: boolean[][], row: number, col: number): number {
+/**
+ * 按项目现行规则计算上墙格的横纵连接分，供结算与 AI 投影共用。
+ * @param wall 已包含新砖的墙
+ * @param row 新砖所在行
+ * @param col 新砖所在列
+ * @returns 横向连续数加纵向连续数，双向成串时再加一分
+ */
+export function scoreForCell(wall: readonly (readonly boolean[])[], row: number, col: number): number {
   let horizontal = 1;
   for (let c = col - 1; c >= 0 && wall[row][c]; c -= 1) horizontal += 1;
   for (let c = col + 1; c < WALL_SIZE && wall[row][c]; c += 1) horizontal += 1;
@@ -202,8 +227,17 @@ function scoreForCell(wall: boolean[][], row: number, col: number): number {
   return horizontal + vertical + (horizontal > 1 && vertical > 1 ? 1 : 0);
 }
 
-/** 终局加分明细：满行 +6 / 满列 +2 / 每种颜色集齐 +10 */
-function endgameBonus(board: PlayerBoard): { rows: number; cols: number; colors: number; total: number } {
+/**
+ * 按项目现行规则汇总终局加分：满行 +6、满列 +2、每种已出现颜色 +10。
+ * @param board 待计算的玩家墙，可传入 AI 投影墙
+ * @returns 满行数、满列数、已出现颜色数和加分总额
+ */
+export function endgameBonus(board: Pick<PlayerBoard, 'wall'>): {
+  rows: number;
+  cols: number;
+  colors: number;
+  total: number;
+} {
   let rows = 0;
   let cols = 0;
   for (let index = 0; index < WALL_SIZE; index += 1) {
@@ -239,10 +273,10 @@ function winnerOf(players: readonly PlayerBoard[], seats: readonly Seat[]): Seat
  * 结算本轮：按玩家顺序清地板扣分、满行移砖上墙，并检测终局。
  *
  * @param state 供应刚清空的局面（applyMove 内部传入，已是被本方持有的副本）
- * @param steps 行动阶段的呈现步骤，轮末步骤会追加其上
- * @returns 轮末结算后的局面与全部步骤
+ * @param steps 可选的呈现步骤数组；未提供时只结算状态
+ * @returns 轮末结算后的局面
  */
-function finishRound(state: GameState, steps: MoveStep[]): MoveResult {
+function finishRound(state: GameState, steps?: MoveStep[]): GameState {
   const next = state;
   for (let player = 0; player < next.players.length; player += 1) {
     const board = next.players[player];
@@ -254,7 +288,7 @@ function finishRound(state: GameState, steps: MoveStep[]): MoveResult {
         board.score = Math.max(0, board.score + penalty);
         for (const color of board.floor) next.discard[color] += 1;
         board.floor = [];
-        steps.push({ kind: 'penalty', player, penalty, after: cloneState(next) });
+        if (steps) steps.push({ kind: 'penalty', player, penalty, after: cloneState(next) });
       }
       board.hasFirstMarker = false;
     }
@@ -271,17 +305,18 @@ function finishRound(state: GameState, steps: MoveStep[]): MoveResult {
       pattern.count = 0;
       const gained = scoreForCell(board.wall, row, col);
       board.score += gained;
-      steps.push({ kind: 'wall', player, row, col, color, gained, after: cloneState(next) });
+      if (steps) steps.push({ kind: 'wall', player, row, col, color, gained, after: cloneState(next) });
     }
   }
 
-  // 终局检测：任一玩家墙上有完整行即进入终局加分
-  const gameEnd = next.players.some((board) => board.wall.some((line) => line.every(Boolean)));
-  if (gameEnd) {
+  // 终局检测：任一玩家墙上有完整行，或已跑满配置的轮次上限
+  const rowComplete = next.players.some((board) => board.wall.some((line) => line.every(Boolean)));
+  const roundLimitReached = next.maxRounds > 0 && next.round >= next.maxRounds;
+  if (rowComplete || roundLimitReached) {
     for (let player = 0; player < next.players.length; player += 1) {
       const bonus = endgameBonus(next.players[player]);
       next.players[player].score += bonus.total;
-      steps.push({
+      if (steps) steps.push({
         kind: 'scoring',
         player,
         rows: bonus.rows,
@@ -296,22 +331,29 @@ function finishRound(state: GameState, steps: MoveStep[]): MoveResult {
   } else {
     next.phase = 'roundEnd';
   }
-  return { state: next, steps };
+  return next;
 }
 
-/**
- * 应用一次拿砖放行动作：整色拿砖 → 余砖进中央 / 拿首标记 → 放行或弃置 →
- * 轮转到下一位；供应全空时自动完成轮末结算。
- *
- * @param state 行动前的对局状态
- * @param move 选定的行动
- * @returns 结算后的新状态与逐步呈现步骤
- */
-export function applyMove(state: GameState, move: Move): MoveResult {
-  const next = cloneState(state);
-  const player = next.current;
-  const board = next.players[player];
-  const steps: MoveStep[] = [];
+/** 同一结算流程可选择记录动画；无 steps 时不创建事件对象或完整快照。 */
+function applyMoveCore(state: GameState, move: Move, steps?: MoveStep[]): GameState {
+  const player = state.current;
+  const originalBoard = state.players[player];
+  // 普通拿砖只改当前玩家、选中工厂、中央和弃堆；其余数据保持只读共享。
+  const next: GameState = {
+    ...state,
+    factories: [...state.factories],
+    center: [...state.center],
+    players: [...state.players],
+    discard: [...state.discard],
+  };
+  const board: PlayerBoard = {
+    ...originalBoard,
+    rows: [...originalBoard.rows],
+    floor: [...originalBoard.floor],
+  };
+  if (move.row >= 0) board.rows[move.row] = { ...originalBoard.rows[move.row] };
+  next.players[player] = board;
+  if (move.source < next.factoryCount) next.factories[move.source] = [...state.factories[move.source]];
   const isCenter = move.source >= next.factoryCount;
   const supply = isCenter ? next.center : next.factories[move.source];
   const count = supply[move.color];
@@ -329,14 +371,14 @@ export function applyMove(state: GameState, move: Move): MoveResult {
       }
     }
   }
-  steps.push({ kind: 'pick', player, source: move.source, color: move.color, count, toCenter, after: cloneState(next) });
+  if (steps) steps.push({ kind: 'pick', player, source: move.source, color: move.color, count, toCenter, after: cloneState(next) });
 
   // 2. 从中央拿砖时顺手拿下首玩家标记：该玩家将成为下轮先手
   if (isCenter && next.centerMarker) {
     next.centerMarker = false;
     board.hasFirstMarker = true;
     next.firstPlayer = player;
-    steps.push({ kind: 'marker', player, after: cloneState(next) });
+    if (steps) steps.push({ kind: 'marker', player, after: cloneState(next) });
   }
 
   // 3. 放置：图案行可放则放入，溢出与弃置统一走地板（超出 7 格容量的部分直接进弃堆）
@@ -350,7 +392,7 @@ export function applyMove(state: GameState, move: Move): MoveResult {
     const toFloor = Math.min(overflow, Math.max(0, FLOOR_LIMIT - board.floor.length));
     for (let i = 0; i < toFloor; i += 1) board.floor.push(move.color);
     for (let i = 0; i < overflow - toFloor; i += 1) next.discard[move.color] += 1;
-    steps.push({
+    if (steps) steps.push({
       kind: 'place',
       player,
       row: move.row,
@@ -363,7 +405,7 @@ export function applyMove(state: GameState, move: Move): MoveResult {
     const toFloor = Math.min(count, Math.max(0, FLOOR_LIMIT - board.floor.length));
     for (let i = 0; i < toFloor; i += 1) board.floor.push(move.color);
     for (let i = 0; i < count - toFloor; i += 1) next.discard[move.color] += 1;
-    steps.push({ kind: 'discard', player, color: move.color, count, after: cloneState(next) });
+    if (steps) steps.push({ kind: 'discard', player, color: move.color, count, after: cloneState(next) });
   }
 
   // 4. 轮转到下一位玩家
@@ -373,29 +415,57 @@ export function applyMove(state: GameState, move: Move): MoveResult {
   const supplyEmpty =
     next.factories.every((plate) => plate.every((value) => value === 0)) &&
     next.center.every((value) => value === 0);
-  if (supplyEmpty) return finishRound(next, steps);
-  return { state: next, steps };
+  if (supplyEmpty) {
+    // 轮末可能修改所有玩家的分数、图案行与墙，此时才取得完整玩家板副本。
+    next.players = next.players.map(clonePlayerBoard);
+    return finishRound(next, steps);
+  }
+  return next;
 }
 
 /**
- * 开启下一轮：弃堆倒回袋中，为空盘补砖，由首玩家标记决定先手。
+ * 应用一次拿砖放行动作，并记录逐步呈现快照；供应全空时结算本轮。
+ * @param state 行动前的局面
+ * @param move 选定的合法行动
+ * @returns 结算后的新状态与逐步呈现步骤
+ */
+export function applyMove(state: GameState, move: Move): MoveResult {
+  const steps: MoveStep[] = [];
+  return { state: applyMoveCore(state, move, steps), steps };
+}
+
+/**
+ * 应用合法行动并结算当前轮，省去动画快照；本函数不补下一轮供应。
+ * @param state 行动前的局面
+ * @param move 选定的合法行动
+ * @returns 不修改输入的下一局面，可能处于 roundEnd 或 gameEnd
+ */
+export function applyMoveState(state: GameState, move: Move): GameState {
+  return applyMoveCore(state, move);
+}
+
+/**
+ * 开启下一轮：弃堆回袋并补盘，由上一轮首标记决定先手，再把标记放回中央。
  * 若补盘后供应仍为空（流通砖全部被玩家板固化吸收），按当前分数直接终局，
  * 否则供应为空的 placing 局面会让搜索与对局陷入死循环。
  *
  * @param state 轮末已结算、处于 roundEnd 阶段的局面
- * @param rng 随机源；缺省时使用确定性补砖（AI 搜索使用）
+ * @param rng 随机源；缺省时使用确定性补砖（测试与预览使用）
  * @returns 新一轮的初始局面（可能直接进入终局）
  */
 export function startNextRound(state: GameState, rng?: () => number): GameState {
   if (state.phase !== 'roundEnd') return state;
-  const next = cloneState(state);
-  // 弃堆全部倒回袋中：袋与弃堆总数守恒，保证砖不凭空消失
-  next.bag = next.bag.map((value, color) => value + next.discard[color]);
-  next.discard = new Array<number>(TILE_COLORS).fill(0);
-  next.round += 1;
-  next.current = next.firstPlayer ?? 0;
-  next.firstPlayer = null;
-  next.phase = 'placing';
+  // 开轮只改供应与回合信息，玩家板保持只读共享。
+  const next: GameState = {
+    ...state,
+    bag: state.bag.map((value, color) => value + state.discard[color]),
+    discard: new Array<number>(TILE_COLORS).fill(0),
+    round: state.round + 1,
+    current: state.firstPlayer ?? 0,
+    firstPlayer: null,
+    centerMarker: true,
+    phase: 'placing',
+  };
   const refilled = refillFactories(next, rng);
   const supplyEmpty =
     refilled.factories.every((plate) => plate.every((value) => value === 0)) &&
@@ -409,15 +479,16 @@ export function startNextRound(state: GameState, rng?: () => number): GameState 
 
 /**
  * 应用行动并自动完成轮末流转，返回「下一个玩家待行动」的局面。
- * AI 搜索与批量模拟共用该口径，保证与真实对局的轮转完全一致。
+ * 批量模拟通过随机源补盘；AI 树搜索使用 applyMoveState，停在未知补盘边界。
  *
  * @param state 当前待行动局面
  * @param move 选定的行动
  * @param rng 随机源；缺省时轮末补砖为确定性模式
+ * @returns 自动开轮后的下一局面，全程不生成动画快照
  */
 export function advanceState(state: GameState, move: Move, rng?: () => number): GameState {
-  const result = applyMove(state, move);
-  return result.state.phase === 'roundEnd' ? startNextRound(result.state, rng) : result.state;
+  const next = applyMoveState(state, move);
+  return next.phase === 'roundEnd' ? startNextRound(next, rng) : next;
 }
 
 /** 某玩家墙上已放置的砖块数量 */

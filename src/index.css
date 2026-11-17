@@ -1025,7 +1025,8 @@ body::before {
   align-items: start;
   padding: 6px 8px;
   border-radius: 9px;
-  border-left: 2px solid transparent;
+  /* 事件色调统一由 data-tone 规则通过 --log-accent 提供，未设置时保持透明 */
+  border-left: 2px solid var(--log-accent, transparent);
   background: var(--surface-2);
   font-size: 11.5px;
   line-height: 1.5;
@@ -1196,6 +1197,36 @@ input[type="range"]::-webkit-slider-thumb {
 .seat-dots {
   display: flex;
   gap: 4px;
+}
+
+.seed-row {
+  display: flex;
+  gap: 8px;
+}
+
+.seed-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.seed-input:focus-visible {
+  outline: 2px solid rgba(56, 232, 255, 0.7);
+  outline-offset: 1px;
+}
+
+/* 隐藏数字输入的原生加减箭头，保持与整体控件一致的圆润外观 */
+.seed-input::-webkit-outer-spin-button,
+.seed-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .setup-preview {
@@ -1906,3 +1937,6 @@ input[type="range"]::-webkit-slider-thumb {
 .log-row[data-tone="roundEnd"] {
   --log-accent: rgba(139, 125, 255, 0.9);
 }
+
+/* 骆驼大赛的全部专属样式已迁移至 src/games/camel-up/ui/camel-up.css（样式归属游戏自治） */
+

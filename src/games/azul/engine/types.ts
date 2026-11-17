@@ -18,7 +18,7 @@ export const FACTORY_TILES = 4;
 /** 地板可容纳的砖块数（首玩家标记不占格） */
 export const FLOOR_LIMIT = 7;
 
-/** 单局配置 */
+/** 对局配置：单局引擎参数 + 界面编排参数 */
 export interface GameConfig {
   /** 参与座位（2-4 个，按座位号升序） */
   seats: Seat[];
@@ -28,6 +28,8 @@ export interface GameConfig {
   aiDepth: number;
   /** 随机种子 */
   seed: number;
+  /** 轮次上限：0 表示不限（标准规则），大于 0 时该轮结算后直接终局 */
+  rounds: number;
 }
 
 /** 图案行：count 为已放置砖数，color 为行内砖色（空行为 null） */
@@ -68,6 +70,8 @@ export interface GameState {
   current: number;
   /** 当前轮次（从 1 开始） */
   round: number;
+  /** 轮次上限：0 表示不限，达到上限的轮次结算后直接终局 */
+  maxRounds: number;
   /** 袋中五色计数 */
   bag: number[];
   /** 弃堆五色计数 */

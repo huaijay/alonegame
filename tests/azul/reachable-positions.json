@@ -1,0 +1,2287 @@
+[
+  {
+    "name": "2-player-opening",
+    "seed": 516575,
+    "turn": 0,
+    "state": {
+      "seats": [
+        0,
+        2
+      ],
+      "factoryCount": 5,
+      "factories": [
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2,
+          2
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": true,
+      "players": [
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 1,
+      "bag": [
+        15,
+        16,
+        19,
+        12,
+        18
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "2-player-round-end",
+    "seed": 516575,
+    "turn": 15,
+    "state": {
+      "seats": [
+        0,
+        2
+      ],
+      "factoryCount": 5,
+      "factories": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "center": [
+        0,
+        2,
+        0,
+        1,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 9,
+          "rows": [
+            {
+              "color": 3,
+              "count": 1
+            },
+            {
+              "color": 0,
+              "count": 2
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 4,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 6,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 2,
+              "count": 2
+            },
+            {
+              "color": 4,
+              "count": 3
+            },
+            {
+              "color": 2,
+              "count": 4
+            },
+            {
+              "color": 4,
+              "count": 2
+            }
+          ],
+          "wall": [
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [
+            2
+          ],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 2,
+      "bag": [
+        13,
+        14,
+        13,
+        11,
+        11
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "2-player-midgame",
+    "seed": 516575,
+    "turn": 17,
+    "state": {
+      "seats": [
+        0,
+        2
+      ],
+      "factoryCount": 5,
+      "factories": [
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          2,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 16,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 3,
+              "count": 1
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              true,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 11,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 4,
+              "count": 2
+            }
+          ],
+          "wall": [
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            [
+              true,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 3,
+      "bag": [
+        8,
+        14,
+        10,
+        7,
+        6
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "3-player-round-end",
+    "seed": 524494,
+    "turn": 17,
+    "state": {
+      "seats": [
+        0,
+        1,
+        3
+      ],
+      "factoryCount": 7,
+      "factories": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          3
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 8,
+          "rows": [
+            {
+              "color": 1,
+              "count": 1
+            },
+            {
+              "color": 0,
+              "count": 2
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              true,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 7,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 1,
+              "count": 2
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 1,
+              "count": 4
+            },
+            {
+              "color": 2,
+              "count": 5
+            }
+          ],
+          "wall": [
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 6,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 3,
+              "count": 2
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 0,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 2,
+      "round": 2,
+      "bag": [
+        9,
+        11,
+        7,
+        9,
+        12
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "3-player-midgame",
+    "seed": 524494,
+    "turn": 20,
+    "state": {
+      "seats": [
+        0,
+        1,
+        3
+      ],
+      "factoryCount": 7,
+      "factories": [
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 17,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 3,
+              "count": 4
+            }
+          ],
+          "wall": [
+            [
+              false,
+              true,
+              true,
+              false,
+              false
+            ],
+            [
+              true,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 15,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              true,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 13,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              true,
+              false,
+              true
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 3,
+      "bag": [
+        4,
+        6,
+        3,
+        4,
+        3
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "4-player-opening",
+    "seed": 532413,
+    "turn": 0,
+    "state": {
+      "seats": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "factoryCount": 9,
+      "factories": [
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          3,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": true,
+      "players": [
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 0,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 1,
+      "bag": [
+        12,
+        13,
+        13,
+        11,
+        15
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "4-player-round-end",
+    "seed": 532413,
+    "turn": 21,
+    "state": {
+      "seats": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "factoryCount": 9,
+      "factories": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "center": [
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 6,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 2,
+              "count": 2
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 2,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 6,
+          "rows": [
+            {
+              "color": 4,
+              "count": 1
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 3,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 6,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 1,
+              "count": 2
+            },
+            {
+              "color": 3,
+              "count": 3
+            },
+            {
+              "color": 0,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 4,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 2,
+              "count": 2
+            },
+            {
+              "color": 1,
+              "count": 3
+            },
+            {
+              "color": 4,
+              "count": 4
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [
+            2,
+            2
+          ],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 2,
+      "bag": [
+        9,
+        8,
+        3,
+        7,
+        7
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  },
+  {
+    "name": "4-player-midgame",
+    "seed": 532413,
+    "turn": 23,
+    "state": {
+      "seats": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "factoryCount": 9,
+      "factories": [
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ]
+      ],
+      "center": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerMarker": false,
+      "players": [
+        {
+          "score": 9,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              true,
+              false,
+              true,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              true,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 13,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": 0,
+              "count": 1
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 14,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            [
+              false,
+              false,
+              true,
+              false,
+              false
+            ],
+            [
+              true,
+              true,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        },
+        {
+          "score": 11,
+          "rows": [
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            },
+            {
+              "color": null,
+              "count": 0
+            }
+          ],
+          "wall": [
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            [
+              true,
+              false,
+              true,
+              false,
+              false
+            ],
+            [
+              false,
+              false,
+              false,
+              false,
+              false
+            ]
+          ],
+          "floor": [],
+          "hasFirstMarker": false
+        }
+      ],
+      "current": 0,
+      "round": 3,
+      "bag": [
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      "discard": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phase": "placing",
+      "winner": null,
+      "firstPlayer": null
+    }
+  }
+]
