@@ -790,11 +790,10 @@ body::before {
 }
 
 .player-card[data-active="true"] {
+  --glow-color: var(--seat-color);
   border-color: color-mix(in srgb, var(--seat-color) 55%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--seat-color) 22%, transparent),
-    0 10px 34px color-mix(in srgb, var(--seat-color) 16%, transparent);
   transform: translateY(-2px);
+  animation: breathe-frame 1.7s ease-in-out infinite;
 }
 
 .player-main {
@@ -1529,4 +1528,381 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 6px;
   margin-top: auto;
   padding-top: 6px;
+}
+
+/* ================================================================== 花砖物语（Azul） */
+
+.azul-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+}
+
+/* 供应区：工厂盘 + 中央区，一行排布，超出时换行 */
+.azul-supply {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.azul-factory,
+.azul-center {
+  --plate-size: clamp(64px, 11vmin, 96px);
+  --plate-tile: clamp(15px, 2.3vmin, 21px);
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  gap: 4px;
+  width: var(--plate-size);
+  height: var(--plate-size);
+  padding: 10px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, var(--surface-3), transparent 62%),
+    var(--board-hangar);
+  border: 1px solid var(--line-strong);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.28),
+    0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* 中央区是方形托盘，视觉上与圆形工厂盘区分 */
+.azul-center {
+  width: calc(var(--plate-size) * 1.32);
+  height: var(--plate-size);
+  border-radius: 18px;
+  padding: 8px 14px;
+}
+
+.azul-factory[data-empty="true"] {
+  opacity: 0.42;
+}
+
+.azul-factory[data-active="true"],
+.azul-center[data-active="true"] {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.28),
+    0 0 0 1px var(--accent),
+    0 0 22px rgba(56, 232, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+.azul-factory-label {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--board-text);
+  background: var(--board-bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  line-height: 1.5;
+}
+
+.azul-center .azul-factory-label {
+  color: var(--accent-ink);
+  border-color: rgba(56, 232, 255, 0.4);
+}
+
+/* 花砖：圆形色块，颜色由 --tile 变量注入；尺寸默认值用于供应盘外的墙 / 图案行 / 地板 */
+.azul-tile {
+  --tile: #4dabff;
+  width: var(--plate-tile, clamp(15px, 2.3vmin, 21px));
+  height: var(--plate-tile, clamp(15px, 2.3vmin, 21px));
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.5), transparent 46%),
+    var(--tile);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  flex: none;
+}
+
+.azul-tile[data-size="md"] {
+  width: var(--azul-md-tile, clamp(18px, 2.6vmin, 24px));
+  height: var(--azul-md-tile, clamp(18px, 2.6vmin, 24px));
+}
+
+/* 当前行动元素的呼吸脉冲 */
+.azul-tile[data-pulse="true"],
+.azul-marker[data-pulse="true"] {
+  animation: azul-breathe 1.7s ease-in-out infinite;
+}
+
+@keyframes azul-breathe {
+  0%,
+  100% {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35), 0 0 0 0 color-mix(in srgb, var(--tile, #38e8ff) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35), 0 0 0 6px color-mix(in srgb, var(--tile, #38e8ff) 18%, transparent),
+      0 0 16px color-mix(in srgb, var(--tile, #38e8ff) 65%, transparent);
+  }
+}
+
+/* 新砖弹入动画：key 变化触发 remount 重放 */
+.azul-tile {
+  animation-name: azul-pop;
+  animation-duration: 0.28s;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 容器级呼吸光晕：思考阶段的当前玩家板、当前行动玩家卡片（替代固定自发光） */
+@keyframes breathe-frame {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow-color) 28%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--glow-color) 72%, transparent),
+      0 0 26px color-mix(in srgb, var(--glow-color) 36%, transparent);
+  }
+}
+
+/* AI 思考中：当前玩家板持续呼吸提示轮到谁 */
+.azul-table[data-thinking="true"] {
+  --glow-color: var(--accent);
+  animation: breathe-frame 1.7s ease-in-out infinite;
+}
+
+@keyframes azul-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 首玩家标记：方形徽记 */
+.azul-marker {
+  width: clamp(15px, 2.3vmin, 21px);
+  height: clamp(15px, 2.3vmin, 21px);
+  border-radius: 5px;
+  background: conic-gradient(from 45deg, #ff4fd8, #8b7dff, #38e8ff, #ff4fd8);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 12px rgba(255, 79, 216, 0.5);
+  flex: none;
+}
+
+/* 玩家板容器：左侧图案行、右侧分数墙、底部地板 */
+.azul-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(100%, 560px);
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--board-apron);
+  border: 1px solid var(--board-apron-line);
+}
+
+.azul-table-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.azul-table-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--board-text);
+}
+
+.azul-table-sub {
+  display: flex;
+  gap: 5px;
+}
+
+.azul-table-sub i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.azul-playerboard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.azul-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.azul-pattern-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 2px 3px;
+  border-radius: 7px;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.azul-pattern-row[data-active="true"] {
+  background: rgba(56, 232, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(56, 232, 255, 0.45);
+}
+
+.azul-slot {
+  --slot-size: clamp(18px, 2.6vmin, 24px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--slot-size);
+  height: var(--slot-size);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  flex: none;
+}
+
+[data-theme="light"] .azul-slot {
+  background: rgba(20, 50, 100, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(20, 50, 100, 0.14);
+}
+
+/* 分数墙：5×5 网格，格底按 wallColorOf 提示应放颜色 */
+.azul-wall {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--board-hangar);
+  border: 1px solid var(--board-hangar-line);
+}
+
+.azul-wall-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cell) 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cell) 34%, transparent);
+  transition: background 0.25s ease, box-shadow 0.3s ease;
+}
+
+/* 新上墙的格子短暂点亮 */
+.azul-wall-cell[data-new="true"] {
+  background: color-mix(in srgb, var(--cell) 55%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cell) 70%, transparent),
+    0 0 14px color-mix(in srgb, var(--cell) 55%, transparent);
+}
+
+/* 地板条：marker + 7 个罚分槽 */
+.azul-floor {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(255, 143, 163, 0.07);
+  border: 1px solid rgba(255, 143, 163, 0.22);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.azul-floor[data-active="true"] {
+  border-color: rgba(255, 143, 163, 0.6);
+  box-shadow: 0 0 14px rgba(255, 143, 163, 0.24);
+}
+
+.azul-floor .azul-slot {
+  width: clamp(15px, 2.2vmin, 20px);
+  height: clamp(15px, 2.2vmin, 20px);
+}
+
+.azul-floor-penalty {
+  margin-left: auto;
+  font-size: 10px;
+  color: #ff8fa3;
+  letter-spacing: 0.04em;
+}
+
+.azul-floor-hint {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.03em;
+}
+
+/* 座位卡里的图案行进度点 */
+.azul-row-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.azul-row-dot-group {
+  display: inline-flex;
+  gap: 2.5px;
+}
+
+.azul-row-dot-group i {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background: var(--surface-3);
+}
+
+.azul-row-dot-group i[data-filled="true"] {
+  background: var(--seat-color, var(--accent));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--seat-color, #38e8ff) 55%, transparent);
+}
+
+/* 日志新增色调（花砖物语事件） */
+.log-row[data-tone="pick"] {
+  --log-accent: rgba(77, 171, 255, 0.85);
+}
+
+.log-row[data-tone="place"] {
+  --log-accent: rgba(255, 209, 102, 0.85);
+}
+
+.log-row[data-tone="discard"] {
+  --log-accent: rgba(255, 143, 163, 0.85);
+}
+
+.log-row[data-tone="marker"] {
+  --log-accent: rgba(255, 79, 216, 0.9);
+}
+
+.log-row[data-tone="wall"] {
+  --log-accent: rgba(61, 220, 151, 0.9);
+}
+
+.log-row[data-tone="penalty"] {
+  --log-accent: rgba(255, 143, 163, 0.9);
+}
+
+.log-row[data-tone="roundEnd"] {
+  --log-accent: rgba(139, 125, 255, 0.9);
 }

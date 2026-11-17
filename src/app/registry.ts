@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import LudoGame from '@/games/ludo/LudoGame';
+import AzulGame from '@/games/azul/AzulGame';
 
 /** 大厅可展示的游戏条目 */
 export interface GameEntry {
@@ -26,5 +27,13 @@ export const GAMES: GameEntry[] = [
     description: '2-4 人 AI 自动对弈，Expectimax 决策，完整回放与胜率统计。',
     badges: ['AI · Expectimax', '2-4 人自动对弈'],
     component: LudoGame,
+  },
+  {
+    id: 'azul',
+    name: '花砖物语',
+    eyebrow: 'AZUL TILES',
+    description: '2-4 人 AI 自动对弈花砖物语，Max-n 决策，图案行上墙与轮末结算完整呈现。',
+    badges: ['AI · Max-n', '2-4 人自动对弈'],
+    component: AzulGame,
   },
 ];

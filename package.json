@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "游戏合集 · AI 自动对弈可视化（多游戏结构，当前含自动飞行棋）",
+  "description": "游戏合集 · AI 自动对弈可视化（含自动飞行棋、花砖物语）",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --import ./scripts/ts-loader.mjs --test ./tests/ludo/game-ai.test.mjs",
+    "test": "node --import ./scripts/ts-loader.mjs --test \"./tests/**/*.test.mjs\"",
     "bench:ai": "node --import ./scripts/ts-loader.mjs ./scripts/bench-ai.mjs",
     "bench:ai:budgets": "node --import ./scripts/ts-loader.mjs ./scripts/bench-budgets.mjs"
   },
