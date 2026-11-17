@@ -1,4 +1,4 @@
-import { toTrackIndex } from '../board';
+import { toTrackIndex, TRACK } from '../board';
 import type { Seat } from '../board';
 import { landingPosition } from '../rules';
 import { FINISH, HOME_FIRST, PLANES_PER_PLAYER, TRACK_LAST } from '../types';
@@ -146,8 +146,10 @@ function createWorkspace(): EvaluationWorkspace {
     incoming: components.subarray(players * 3, players * 4),
     outgoing: components.subarray(players * 4, players * 5),
     capturable: components.subarray(players * 5),
-    trackLoss: new Float64Array(TRACK_LAST + 1),
-    occupants: new Uint16Array(TRACK_LAST + 1),
+    // why：跑道绝对索引为 0..TRACK.length-1（含 TRACK_LAST 之后的那一格），按 TRACK_LAST+1
+    // 分配会少一格，落在末格的攻击目标写入被静默丢弃，污染威胁统计并破坏旋转对称。
+    trackLoss: new Float64Array(TRACK.length),
+    occupants: new Uint16Array(TRACK.length),
     tracks: new Int8Array(planes),
     losses: new Float64Array(planes),
     targetOffsets: new Uint16Array(planes),

@@ -5,10 +5,10 @@ import { chooseMove } from '../../src/games/ludo/engine/ai/expectimax.ts';
 import { breakdownOf, createEvaluator, evaluate, evaluateAll } from '../../src/games/ludo/engine/ai/evaluate.ts';
 import { applyMove, getLegalMoves, landingPosition, passTurn } from '../../src/games/ludo/engine/rules.ts';
 import { createRng, rollDice } from '../../src/games/ludo/engine/rng.ts';
-import { FINISH } from '../../src/games/ludo/engine/types.ts';
+import { FINISH, TRACK_LAST } from '../../src/games/ludo/engine/types.ts';
 import { fixtures, makeState } from './ai-fixtures.mjs';
 
-// 修改前正式规则的穷举落点快照，防止新版搜索与正式规则共用 helper 后彼此自证。
+// 正式规则的穷举落点快照（起点几何重构后重新生成），防止新版搜索与正式规则共用 helper 后彼此自证。
 const originalLandings = JSON.parse(readFileSync(new URL('./landing-positions.json', import.meta.url), 'utf8'));
 const unlimited = { depth: 2, budgetMs: 1e9, nodeBudget: 1e9 };
 const close = (actual, expected, message = '') =>
@@ -72,7 +72,7 @@ test('完整浅层搜索与独立 Max-n 枚举一致（2、3、4 人）', () => 
 });
 
 test('对手选择自己的最大收益，不能假设对手帮助根玩家', () => {
-  const state = makeState([0, 2], [[40, 42, 57, 57], [51, 56, 57, 57]]);
+  const state = makeState([0, 2], [[40, 42, 56, 56], [50, 55, 56, 56]]);
   checkAgainstOracle(state, 1, 1);
 });
 
@@ -162,14 +162,14 @@ test('非法骰子与搜索参数在入口被拒绝', () => {
 test('无合法行动和已经结束的对局不再产生决策', () => {
   const blocked = makeState([0, 2], [[-1, -1, -1, -1], [0, 1, 2, 3]]);
   assert.equal(chooseMove(blocked, 5, unlimited), null);
-  const finished = makeState([1, 3], [[0, 1, 2, 3], [57, 57, 57, 57]]);
+  const finished = makeState([1, 3], [[0, 1, 2, 3], [56, 56, 56, 56]]);
   finished.winner = 3;
   finished.finishedOrder = [3];
   assert.equal(chooseMove(finished, 6, unlimited), null);
 });
 
 test('立即获胜优先，终局分数按座位号而非玩家下标判断', () => {
-  const state = makeState([1, 3], [[57, 57, 57, 56], [55, 56, 57, 57]]);
+  const state = makeState([1, 3], [[56, 56, 56, 55], [54, 55, 56, 56]]);
   const result = chooseMove(state, 1, { ...unlimited, depth: 0 });
   assert.deepEqual(result.move, { kind: 'advance', plane: 3 });
   assert.equal(result.value, 1000000);
@@ -181,7 +181,7 @@ test('立即获胜优先，终局分数按座位号而非玩家下标判断', ()
 
 test('连续六点和第三次六点结束回合均被搜索正确处理', () => {
   for (const streak of [0, 1, 2]) {
-    const state = makeState([0, 2], [[-1, 8, 25, 51], [6, 19, 38, 55]], 0, streak);
+    const state = makeState([0, 2], [[-1, 8, 25, 50], [6, 19, 38, 54]], 0, streak);
     checkAgainstOracle(state, 6, 2);
     const next = applyMove(state, { kind: 'advance', plane: 1 }, 6).state;
     assert.equal(next.current, streak < 2 ? 0 : 1);
@@ -190,7 +190,7 @@ test('连续六点和第三次六点结束回合均被搜索正确处理', () =>
 });
 
 test('无法行棋的六点不能获得额外回合', () => {
-  const state = makeState([1, 3], [[56, 57, 57, 57], [0, 1, 2, 3]], 0, 1);
+  const state = makeState([1, 3], [[55, 56, 56, 56], [0, 1, 2, 3]], 0, 1);
   assert.equal(getLegalMoves(state, 6).length, 0);
   const after = passTurn(state);
   assert.equal(after.current, 1);
@@ -198,7 +198,7 @@ test('无法行棋的六点不能获得额外回合', () => {
 });
 
 test('同位置飞机置换不影响局面分数或根候选价值', () => {
-  const original = makeState([0, 2, 3], [[8, 8, 29, 43], [12, 12, 26, 48], [4, 19, 19, 52]]);
+  const original = makeState([0, 2, 3], [[8, 8, 29, 43], [12, 12, 26, 48], [4, 19, 19, 51]]);
   const permutation = [2, 0, 3, 1];
   const permuted = { ...original, planes: original.planes.map((row) => permutation.map((index) => row[index])) };
   const first = chooseMove(original, 3, unlimited);
@@ -222,7 +222,7 @@ test('根层仍列出等价飞机，内部等价分支可被复用', () => {
 test('落点查表与四座位所有位置、六种骰子的正式规则逐一相符', () => {
   for (const seat of [0, 1, 2, 3]) {
     for (let pos = -1; pos <= FINISH; pos += 1) {
-      const state = makeState([seat, (seat + 2) % 4], [[pos, 57, 57, 57], [57, 57, 57, 0]]);
+      const state = makeState([seat, (seat + 2) % 4], [[pos, 56, 56, 56], [56, 56, 56, 0]]);
       for (let dice = 1; dice <= 6; dice += 1) {
         const move = getLegalMoves(state, dice).find((candidate) => candidate.plane === 0);
         const expected = move ? applyMove(state, move, dice).state.planes[0][0] : -2;
@@ -234,12 +234,12 @@ test('落点查表与四座位所有位置、六种骰子的正式规则逐一�
 });
 
 test('踩子只发生在最终落点，飞行优先于普通同色跳跃', () => {
-  const jump = makeState([0, 2], [[0, 57, 57, 57], [30, 57, 57, 57]]);
-  const jumped = applyMove(jump, { kind: 'advance', plane: 0 }, 4);
-  assert.equal(jumped.state.planes[0][0], 8);
+  const jump = makeState([0, 2], [[0, 56, 56, 56], [30, 56, 56, 56]]);
+  const jumped = applyMove(jump, { kind: 'advance', plane: 0 }, 3);
+  assert.equal(jumped.state.planes[0][0], 7);
   assert.equal(jumped.state.planes[1][0], 30);
   assert.ok(jumped.steps.every((step) => step.captures.length === 0));
-  const fly = makeState([0, 2], [[8, 57, 57, 57], [42, 50, 57, 57]]);
+  const fly = makeState([0, 2], [[8, 56, 56, 56], [42, 50, 56, 56]]);
   const flown = applyMove(fly, { kind: 'advance', plane: 0 }, 4);
   assert.equal(flown.state.planes[0][0], 24);
   assert.equal(flown.state.planes[1][0], 42);
@@ -247,9 +247,9 @@ test('踩子只发生在最终落点，飞行优先于普通同色跳跃', () =>
 });
 
 test('起飞可以捕获，叠在最终落点的对手飞机一次全部被踩', () => {
-  const state = makeState([0, 2], [[-1, -1, -1, -1], [26, 26, 52, 57]]);
+  const state = makeState([0, 2], [[-1, -1, -1, -1], [26, 26, 51, 56]]);
   const result = applyMove(state, { kind: 'launch', plane: 0 }, 6);
-  assert.deepEqual(result.state.planes[1], [-1, -1, 52, 57]);
+  assert.deepEqual(result.state.planes[1], [-1, -1, 51, 56]);
   assert.equal(result.steps[0].captures.length, 2);
 });
 
@@ -268,7 +268,7 @@ test('批量估值与每个玩家单独估值及解释分项保持一致', () =>
 });
 
 test('整张棋盘转动后，估值和决策保持一致', () => {
-  const state = makeState([0, 1, 2, 3], [[8, 19, 34, 47], [4, 16, 31, 51], [6, 21, 38, 53], [11, 23, 41, 54]]);
+  const state = makeState([0, 1, 2, 3], [[8, 19, 34, 47], [4, 16, 31, 50], [6, 21, 38, 52], [11, 23, 41, 53]]);
   const rotated = { ...state, seats: state.seats.map((seat) => (seat + 1) % 4) };
   const a = chooseMove(state, 4, unlimited);
   const b = chooseMove(rotated, 4, unlimited);
@@ -278,7 +278,7 @@ test('整张棋盘转动后，估值和决策保持一致', () => {
 });
 
 test('搜索正确撤销同一步踩掉全部十二架敌机的局面', () => {
-  const state = freezeState(makeState([0, 1, 2, 3], [[27, 27, 27, 27], [14, 14, 14, 14], [1, 1, 1, 1], [27, 57, 57, 57]], 3));
+  const state = freezeState(makeState([0, 1, 2, 3], [[23, 23, 23, 23], [10, 10, 10, 10], [49, 49, 49, 49], [27, 56, 56, 56]], 3));
   const afterRoot = applyMove(state, { kind: 'advance', plane: 0 }, 6).state;
   const captured = applyMove(afterRoot, { kind: 'advance', plane: 0 }, 3);
   assert.equal(captured.steps.at(-1).captures.length, 12);
@@ -292,8 +292,10 @@ test('搜索正确撤销同一步踩掉全部十二架敌机的局面', () => {
   }
 });
 
-const soloRolls = new Array(59).fill(0);
-for (let pos = 56; pos >= -1; pos -= 1) {
+const soloRolls = new Array(FINISH + 2).fill(0);
+// why：已归位（FINISH）的飞机不再需要掷骰，对应槽位保持初始 0 才是正确语义；
+// 若把终点也当作可行动位置枚举，六种骰面全部非法会除零得到 NaN 并污染上游位置。
+for (let pos = FINISH - 1; pos >= -1; pos -= 1) {
   const destinations = originalLandings[pos + 1].filter((target) => target >= 0);
   soloRolls[pos + 1] = (6 + destinations.reduce((sum, target) => sum + soloRolls[target + 1], 0)) / destinations.length;
 }
@@ -327,7 +329,7 @@ function captureOracle(state) {
     }
   }
   for (let player = 0; player < state.seats.length; player += 1) {
-    const maximum = state.planes[player].reduce((sum, pos) => sum + (pos >= 0 && pos <= 51 ? captureLoss(pos) : 0), 0);
+    const maximum = state.planes[player].reduce((sum, pos) => sum + (pos >= 0 && pos <= TRACK_LAST ? captureLoss(pos) : 0), 0);
     incoming[player] = Math.min(incoming[player], maximum);
   }
   return { incoming, outgoing };
@@ -336,10 +338,10 @@ function captureOracle(state) {
 test('威胁估值与真实规则枚举一致，正确处理起飞、跳飞、叠子及互斥走法', () => {
   const cases = [
     ...fixtures.map((fixture) => fixture.state),
-    makeState([0, 2], [[0, 57, 57, 57], [30, 57, 57, 57]]),
-    makeState([0, 2], [[8, 57, 57, 57], [42, 50, 57, 57]]),
-    makeState([0, 2], [[-1, -1, -1, -1], [26, 26, 52, 57]]),
-    makeState([0, 1, 2, 3], [[26, 27, 27, 27], [8, 57, 57, 57], [1, 1, 1, 1], [40, 40, 40, 40]]),
+    makeState([0, 2], [[0, 56, 56, 56], [30, 56, 56, 56]]),
+    makeState([0, 2], [[8, 56, 56, 56], [42, 50, 56, 56]]),
+    makeState([0, 2], [[-1, -1, -1, -1], [26, 26, 51, 56]]),
+    makeState([0, 1, 2, 3], [[26, 27, 27, 27], [8, 56, 56, 56], [1, 1, 1, 1], [40, 40, 40, 40]]),
   ];
   for (const state of cases) {
     const expected = captureOracle(state);
@@ -352,8 +354,8 @@ test('威胁估值与真实规则枚举一致，正确处理起飞、跳飞、�
 });
 
 test('同一骰子同一落点的多架攻击机不重复累加威胁', () => {
-  const one = makeState([0, 2], [[0, 57, 57, 57], [29, 57, 57, 57]]);
-  const many = makeState([0, 2], [[0, 0, 0, 0], [29, 57, 57, 57]]);
+  const one = makeState([0, 2], [[0, 56, 56, 56], [30, 56, 56, 56]]);
+  const many = makeState([0, 2], [[0, 0, 0, 0], [30, 56, 56, 56]]);
   close(breakdownOf(one, 0).attack, breakdownOf(many, 0).attack);
   close(breakdownOf(one, 1).safety, breakdownOf(many, 1).safety);
   assert.ok(breakdownOf(one, 0).attack > 0);
@@ -364,13 +366,13 @@ test('终点精确点数按多机排程成本计分，不能把每架56都当作
   function remaining(planes) {
     const key = [...planes].sort((a, b) => a - b).join(',');
     if (cache.has(key)) return cache.get(key);
-    if (planes.every((pos) => pos === 57)) return 0;
+    if (planes.every((pos) => pos === 56)) return 0;
     let total = 6;
     let usefulDice = 0;
     for (let dice = 1; dice <= 6; dice += 1) {
       let best = Infinity;
       for (let plane = 0; plane < planes.length; plane += 1) {
-        if (planes[plane] === 57 || planes[plane] + dice > 57) continue;
+        if (planes[plane] === 56 || planes[plane] + dice > 56) continue;
         const next = [...planes];
         next[plane] += dice;
         best = Math.min(best, remaining(next));
@@ -381,17 +383,17 @@ test('终点精确点数按多机排程成本计分，不能把每架56都当作
     cache.set(key, result);
     return result;
   }
-  close(remaining([56, 56, 56, 56]), 24);
-  close(remaining([51, 57, 57, 57]), 6);
-  close(remaining([51, 51, 51, 51]), 15.321775312492463);
-  const broad = makeState([0, 2], [[51, 51, 51, 51], [0, 57, 57, 57]]);
-  const narrow = makeState([0, 2], [[56, 56, 56, 56], [0, 57, 57, 57]]);
-  const benefit = 8 * (remaining([56, 56, 56, 56]) - remaining([51, 51, 51, 51])) - 4 * 4;
+  close(remaining([55, 55, 55, 55]), 24);
+  close(remaining([50, 56, 56, 56]), 6);
+  close(remaining([50, 50, 50, 50]), 15.321775312492463);
+  const broad = makeState([0, 2], [[50, 50, 50, 50], [0, 56, 56, 56]]);
+  const narrow = makeState([0, 2], [[55, 55, 55, 55], [0, 56, 56, 56]]);
+  const benefit = 8 * (remaining([55, 55, 55, 55]) - remaining([50, 50, 50, 50])) - 4 * 4;
   close(breakdownOf(broad, 0).home - breakdownOf(narrow, 0).home, benefit);
 });
 
 test('终局解释分项与胜负估值统一', () => {
-  const state = makeState([1, 3], [[57, 57, 57, 57], [0, 1, 2, 3]]);
+  const state = makeState([1, 3], [[56, 56, 56, 56], [0, 1, 2, 3]]);
   state.winner = 1;
   state.finishedOrder = [1];
   for (let player = 0; player < 2; player += 1) {
@@ -407,7 +409,7 @@ test('终局解释分项与胜负估值统一', () => {
 test('局部估值工作区跨局面、人数、终局复用时没有残留或输出别名', () => {
   const first = createEvaluator();
   const second = createEvaluator();
-  const terminal = makeState([1, 3], [[57, 57, 57, 57], [1, 3, 5, 7]]);
+  const terminal = makeState([1, 3], [[56, 56, 56, 56], [1, 3, 5, 7]]);
   terminal.winner = 1;
   const states = [...fixtures.map((fixture) => fixture.state), terminal, fixtures[3].state, fixtures[0].state];
   const retained = [];
