@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import LudoGame from '@/games/ludo/LudoGame';
 import AzulGame from '@/games/azul/AzulGame';
 import CamelUpGame from '@/games/camel-up/CamelUpGame';
+import SplendorGame from '@/games/splendor/SplendorGame';
 
 /** 大厅可展示的游戏条目 */
 export interface GameEntry {
@@ -44,5 +45,13 @@ export const GAMES: GameEntry[] = [
     description: '2-8 人 AI 自动对弈骆驼大赛，Expectimax 决策，腿注、地形块与总冠押注完整呈现。',
     badges: ['AI · Expectimax', '2-8 人自动对弈'],
     component: CamelUpGame,
+  },
+  {
+    id: 'splendor',
+    name: '璀璨宝石',
+    eyebrow: 'SPLENDOR',
+    description: '2-4 人宝石商会博弈：90 张发展卡、贵族拜访、AI 自动决策与可选真人入局。',
+    badges: ['AI · 经济策略', '2-4 人 · 可参与'],
+    component: SplendorGame,
   },
 ];
