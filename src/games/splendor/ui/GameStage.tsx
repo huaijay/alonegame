@@ -3,11 +3,11 @@ import type { CSSProperties } from 'react';
 import { PLAYER_NAMES } from '../engine/board';
 import { describeMove } from '../engine/ai/search';
 import { aiLevelFor } from '../engine/ai/levels';
-import { bonusesOf, getLegalMoves, moveKey, paymentFor, tokenCount } from '../engine/rules';
+import { bonusesOf, getLegalMoves, moveKey, paymentFor } from '../engine/rules';
 import { GameSession } from '../engine/session';
 import { GEM_COLORS } from '../engine/types';
 import type { GameConfig, GameEvent, GameState, GemColor, Move, TokenColor } from '../engine/types';
-import { DevelopmentCardView, NobleTile } from './DevelopmentCardView';
+import { DevelopmentCardView, NobleChip, NobleTile } from './DevelopmentCardView';
 import { GemToken } from './GemToken';
 
 interface GameStageProps {
@@ -56,9 +56,7 @@ function EventGlyph({ kind }: { kind: GameEvent['kind'] }) {
 }
 
 /** 席位资产：永久折扣以叠牌呈现，实体筹码以微型宝石呈现，全部可视化。 */
-function SeatAssets({ view, seat, discountOnly = false }: {
-  view: GameState; seat: number; discountOnly?: boolean;
-}) {
+function SeatAssets({ view, seat }: { view: GameState; seat: number }) {
   const player = view.players[seat];
   const discounts = bonusesOf(player);
   return (
@@ -69,19 +67,18 @@ function SeatAssets({ view, seat, discountOnly = false }: {
         ))}
         {GEM_COLORS.every((color) => discounts[color] === 0) ? <span className="sp-stack is-empty">—</span> : null}
       </span>
-      {discountOnly ? null : (
-        <span className="sp-seat-chips">
-          {([...GEM_COLORS, 'gold'] as TokenColor[]).filter((color) => player.tokens[color] > 0).map((color) => (
-            <GemToken key={color} color={color} size="xs" count={player.tokens[color]} />
-          ))}
-        </span>
-      )}
+      <span className="sp-seat-chips">
+        {([...GEM_COLORS, 'gold'] as TokenColor[]).filter((color) => player.tokens[color] > 0).map((color) => (
+          <GemToken key={color} color={color} size="xs" count={player.tokens[color]} />
+        ))}
+      </span>
     </>
   );
 }
 
 /**
  * 展示珠宝交易桌面及本局固定的 AI 强度，所有行动交由会话推进。
+ * 布局自上而下：贵族 → 卡市 → 宝石银行 → 对手席位 → 玩家操作区。
  * @param props 对局配置与退出回调
  * @returns 支持真人行动、观赛与回放的桌面
  */
@@ -90,8 +87,11 @@ export function GameStage({ config, onExit }: GameStageProps) {
   const aiLevel = aiLevelFor(config.aiStrength, config.playerCount);
   const snap = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const [picked, setPicked] = useState<GemColor[]>([]);
-  const [inspectedSeat, setInspectedSeat] = useState(config.humanSeat ?? 0);
   const [sideOpen, setSideOpen] = useState(true);
+  // 玩家档案以悬浮气泡展示：记录触发元素几何用于锚定，不撑开侧栏布局
+  const [fileAnchor, setFileAnchor] = useState<
+    { inspectedSeat: number; cx: number; top: number; bottom: number } | null>(null);
+  const inspectedSeat = fileAnchor?.inspectedSeat ?? null;
 
   useEffect(() => {
     session.start();
@@ -102,29 +102,77 @@ export function GameStage({ config, onExit }: GameStageProps) {
     setPicked([]);
   }, [snap.state.turn]);
 
+  /** 点击席位切换悬浮档案：记录触发元素几何，气泡贴着它弹出。 */
+  const toggleFile = (seat: number, el: HTMLElement) => {
+    if (fileAnchor?.inspectedSeat === seat) { setFileAnchor(null); return; }
+    const rect = el.getBoundingClientRect();
+    setFileAnchor({
+      inspectedSeat: seat,
+      cx: rect.left + rect.width / 2,
+      top: rect.top,
+      bottom: rect.bottom,
+    });
+  };
+
+  // 点浮层外部关闭：席位与自己的头部除外，它们由 onClick 负责切换
+  useEffect(() => {
+    if (!fileAnchor) return;
+    const close = (event: PointerEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('.sp-file-pop') || target.closest('.sp-seat, .sp-my-head')) return;
+      setFileAnchor(null);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [fileAnchor]);
+
   const replaying = snap.replayIndex !== null;
   const frame = snap.replayIndex === null ? null : snap.frames[snap.replayIndex];
   const view: GameState = frame?.state ?? snap.state;
   const actingSeat = snap.state.current;
-  const canAct = config.humanSeat !== null && config.humanSeat === actingSeat &&
+  const humanSeat = config.humanSeat;
+  const canAct = humanSeat !== null && humanSeat === actingSeat &&
     snap.state.phase === 'playing' && !replaying;
-  const viewer = view.players[inspectedSeat];
   const legal = useMemo(() => getLegalMoves(snap.state), [snap.state]);
   const canDo = (move: Move) => legal.some((item) => moveKey(item) === moveKey(move));
-  const canTake = picked.length > 0 && canDo({ kind: 'take', colors: picked });
   const aiThinking = snap.status === 'running' && !replaying && view.phase === 'playing' &&
-    config.humanSeat !== view.current;
+    (humanSeat === null || humanSeat !== view.current);
+  const human = humanSeat === null ? null : view.players[humanSeat];
+  const humanBonuses = human ? bonusesOf(human) : null;
+
+  // 双取模式以两个相同颜色的槽位预显示，与单张/三张一样都等「确认领取」才真正执行。
+  const doublePicked = picked.length === 2 && picked[0] === picked[1];
+  const canTake = doublePicked ? canDo({ kind: 'double', color: picked[0] })
+    : picked.length === 3 ? canDo({ kind: 'take', colors: picked }) : false;
 
   const handleSelectGem = (color: GemColor) => {
     if (!canAct) return;
-    setPicked((prev) => prev.includes(color) ? prev.filter((item) => item !== color) :
-      prev.length < 3 ? [...prev, color] : prev);
+    setPicked((prev) => {
+      // 已预选双取时锁定槽位：点同色取消，点异色不响应，避免拼出非法组合。
+      if (prev.length === 2 && prev[0] === prev[1]) return prev[0] === color ? [] : prev;
+      return prev.includes(color) ? prev.filter((item) => item !== color)
+        : prev.length < 3 ? [...prev, color] : prev;
+    });
+  };
+
+  const handleDouble = (color: GemColor) => {
+    if (!canAct) return;
+    setPicked([color, color]);
+  };
+
+  const removeSlot = (slot: number) => {
+    setPicked((prev) => prev.filter((_, index) => index !== slot));
   };
 
   const action = (move: Move) => {
     if (!canAct) return;
     session.humanMove(move);
     setPicked([]);
+  };
+
+  const confirmTake = () => {
+    if (!canAct || !canTake) return;
+    action(doublePicked ? { kind: 'double', color: picked[0] } : { kind: 'take', colors: picked });
   };
 
   const statusText = view.phase === 'finished' ? '对局已结束'
@@ -156,40 +204,12 @@ export function GameStage({ config, onExit }: GameStageProps) {
           </div>
         </header>
 
-        <div className="sp-seat-row">
-          {view.players.map((player, index) => (
-            <button key={index} type="button" className="sp-seat" data-seat={index}
-              data-active={view.phase === 'playing' && index === view.current}
-              data-selected={inspectedSeat === index} data-winner={view.winners.includes(index)}
-              data-human={config.humanSeat === index}
-              onClick={() => setInspectedSeat(index)}>
-              <SeatSigil seat={index} small />
-              <span className="sp-seat-body">
-                <span className="sp-seat-name">{PLAYER_NAMES[index]}</span>
-                <SeatAssets view={view} seat={index} />
-              </span>
-              <span className="sp-seat-reserved">
-                {player.reserved.map((card) => (
-                  <span key={card.id} className="sp-mini-card" data-color={card.bonus}>{card.points || ''}</span>
-                ))}
-              </span>
-              <span className="sp-seat-score">
-                {view.winners.includes(index) ? <i className="sp-seat-crown">♛</i> : null}
-                <b key={player.points} className="sp-score-num">{player.points}</b>
-                <small>VP</small>
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {view.winners.length > 0 ? (
-          <div className="sp-victory-banner"><span>♛</span>
-            <b>{view.winners.map((seat) => PLAYER_NAMES[seat]).join('、')} 荣登首席</b>
-            <small>{Math.max(...view.players.map((player) => player.points))} 声望 · 本局圆满结束</small>
+        <section className="sp-nobles-section">
+          <div className="sp-nobles-row">
+            {view.nobles.map((noble) => <NobleTile key={noble.id} noble={noble} />)}
+            {view.nobles.length === 0 ? <span className="sp-empty-note">{view.rules.nobleCount === 0 ? '本局未启用贵族' : '贵族们已全部到访'}</span> : null}
           </div>
-        ) : view.finalRound ? (
-          <div className="sp-final-banner">✦ 已有商会达到 {view.rules.victoryPoints} 声望，本轮结束即结算最终名次 ✦</div>
-        ) : null}
+        </section>
 
         <section className="sp-market-section">
           <div className="sp-market-stack">
@@ -204,19 +224,17 @@ export function GameStage({ config, onExit }: GameStageProps) {
                     <span className="sp-tier-roman">{ROMANS[tier]}</span>
                     <span className="sp-tier-name">{TIER_NAMES[tier]}</span>
                   </div>
-                  <button type="button" className="sp-deck" data-tier={tier} data-reservable={mayReserve}
-                    disabled={!mayReserve || deck.length === 0}
-                    onClick={() => action({ kind: 'reserve', tier, slot: null })}
-                    title={mayReserve ? '从牌堆顶端盲抽一张预留' : '发展卡余量 ' + deck.length + ' 张'}>
+                  <div className="sp-deck" data-tier={tier}
+                    title={'发展卡余量 ' + deck.length + ' 张'}>
                     <span className="sp-deck-count">{deck.length}</span>
-                    {mayReserve ? <span className="sp-deck-hint">盲抽预留</span> : null}
-                  </button>
+                  </div>
                   {row.map((card, slot) => card ? (
                     <DevelopmentCardView key={card.id} card={card}
                       affordable={paymentFor(card, view.players[view.current]) !== null}
                       onBuy={canAct && canDo({ kind: 'buy', source: 'market', tier, slot }) ?
                         () => action({ kind: 'buy', source: 'market', tier, slot }) : undefined}
-                      onReserve={mayReserve ? () => action({ kind: 'reserve', tier, slot }) : undefined}
+                      onReserve={mayReserve && canDo({ kind: 'reserve', tier, slot }) ?
+                        () => action({ kind: 'reserve', tier, slot }) : undefined}
                     />
                   ) : <div key={'empty-' + slot} className="sp-empty-card">售罄</div>)}
                 </div>
@@ -225,59 +243,151 @@ export function GameStage({ config, onExit }: GameStageProps) {
           </div>
         </section>
 
-        <div className="sp-lower-board">
-          <section className="sp-nobles-section">
-            <div className="sp-nobles-row">
-              {view.nobles.map((noble) => <NobleTile key={noble.id} noble={noble} />)}
-              {view.nobles.length === 0 ? <span className="sp-empty-note">{view.rules.nobleCount === 0 ? '本局未启用贵族' : '贵族们已全部到访'}</span> : null}
+        <section className="sp-vault-section">
+          <div className="sp-bank-row">
+            {GEM_COLORS.map((color) => (
+              <div key={color} className="sp-bank-slot">
+                <GemToken color={color} count={view.bank[color]} size="md"
+                  selected={picked.includes(color)} disabled={!canAct || view.bank[color] === 0}
+                  onClick={() => handleSelectGem(color)} />
+                {canAct && view.bank[color] >= view.rules.doubleTakeMinimum ? (
+                  <button type="button" className="sp-double-pill" title={'预选两枚，确认后领取'}
+                    onClick={() => handleDouble(color)}>×2</button>
+                ) : null}
+              </div>
+            ))}
+            <div className="sp-bank-slot is-gold">
+              <GemToken color="gold" count={view.bank.gold} size="md" />
             </div>
-          </section>
+          </div>
+          {canAct ? (
+            <div className="sp-take-tray">
+              <div className="sp-tray">
+                {[0, 1, 2].map((slot) => {
+                  const color = picked[slot];
+                  return (
+                    <button type="button" key={slot} className="sp-tray-slot" data-filled={color !== undefined}
+                      onClick={() => color ? removeSlot(slot) : undefined}
+                      aria-label={color ? '移除' : '空槽位'}>
+                      {color ? <GemToken color={color} size="xs" /> : <i>＋</i>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className="sp-primary-button" disabled={!canTake}
+                onClick={confirmTake}>
+                确认领取 →
+              </button>
+            </div>
+          ) : null}
+        </section>
 
-          <section className="sp-vault-section">
-            <div className="sp-bank-row">
+        {view.winners.length > 0 ? (
+          <div className="sp-victory-banner"><span>♛</span>
+            <b>{view.winners.map((seat) => PLAYER_NAMES[seat]).join('、')} 荣登首席</b>
+            <small>{Math.max(...view.players.map((player) => player.points))} 声望 · 本局圆满结束</small>
+          </div>
+        ) : view.finalRound ? (
+          <div className="sp-final-banner">✦ 已有玩家达到 {view.rules.victoryPoints} 声望，本轮结束即结算最终名次 ✦</div>
+        ) : null}
+
+        <div className="sp-seat-row">
+          {view.players.map((player, index) => humanSeat === index ? null : (
+            <button type="button" key={index} className="sp-seat" data-seat={index}
+              data-active={view.phase === 'playing' && index === view.current}
+              data-winner={view.winners.includes(index)}
+              data-selected={inspectedSeat === index}
+              onClick={(event) => toggleFile(index, event.currentTarget)}
+              title="查看该玩家的完整档案">
+              <SeatSigil seat={index} small />
+              <span className="sp-seat-body">
+                <span className="sp-seat-name">{PLAYER_NAMES[index]}</span>
+                <SeatAssets view={view} seat={index} />
+              </span>
+              <span className="sp-seat-reserved">
+                {player.reserved.map((card) => (
+                  <span key={card.id} className="sp-mini-card" data-color={card.bonus}>{card.points || ''}</span>
+                ))}
+              </span>
+              {player.nobles.length ? (
+                <span className="sp-seat-nobles" title={'已拜访贵族 +' + player.nobles.length * 3 + ' 分'}>
+                  {player.nobles.map((noble) => <NobleChip key={noble.id} noble={noble} />)}
+                </span>
+              ) : null}
+              <span className="sp-seat-score">
+                {view.winners.includes(index) ? <i className="sp-seat-crown">♛</i> : null}
+                <b key={player.points} className="sp-score-num">{player.points}</b>
+                <small>VP</small>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {human && humanBonuses ? (
+          <section className="sp-my-desk" data-active={canAct} data-winner={view.winners.includes(humanSeat ?? -1)}>
+            <button type="button" className="sp-my-head"
+              data-selected={inspectedSeat === humanSeat}
+              onClick={(event) => toggleFile(humanSeat ?? 0, event.currentTarget)}
+              title="查看你的完整档案">
+              <SeatSigil seat={humanSeat ?? 0} small />
+              <div className="sp-my-title">
+                <strong>{PLAYER_NAMES[humanSeat ?? 0]}<i className="sp-my-tag">你</i></strong>
+                <small>{view.phase === 'finished' ? '对局已结束'
+                  : canAct ? '轮到你了：拿筹码、购卡或锁定近卡'
+                    : snap.status === 'paused' ? '已暂停 · 可单步推演' : '等待其他玩家…'}</small>
+              </div>
+              {human.nobles.length ? (
+                <span className="sp-my-nobles" title={'已拜访贵族 +' + human.nobles.length * 3 + ' 分'}>
+                  {human.nobles.map((noble) => <NobleChip key={noble.id} noble={noble} />)}
+                </span>
+              ) : null}
+              {view.winners.includes(humanSeat ?? -1) ? <i className="sp-seat-crown">♛</i> : null}
+              <span className="sp-my-vp"><b>{human.points}</b><small>VP</small></span>
+            </button>
+            {/* 折扣卡与筹码同色列对齐：上排是永久折扣叠牌，下排是同色实体筹码，便于心算差距 */}
+            <div className="sp-my-columns">
               {GEM_COLORS.map((color) => (
-                <div key={color} className="sp-bank-slot">
-                  <GemToken color={color} count={view.bank[color]} size="md"
-                    selected={picked.includes(color)} disabled={!canAct || view.bank[color] === 0}
-                    onClick={() => handleSelectGem(color)} />
-                  {canAct && view.bank[color] >= view.rules.doubleTakeMinimum ? (
-                    <button type="button" className="sp-double-pill" title={'一次性领取两枚'}
-                      onClick={() => action({ kind: 'double', color })}>×2</button>
-                  ) : null}
+                <div key={color} className="sp-my-column">
+                  <span className={'sp-stack' + (humanBonuses[color] === 0 ? ' is-empty' : '')}
+                    data-color={color} title="永久折扣">{humanBonuses[color]}</span>
+                  <GemToken color={color} size="sm" count={human.tokens[color]} />
                 </div>
               ))}
-              <div className="sp-bank-slot is-gold">
-                <GemToken color="gold" count={view.bank.gold} size="md" />
+              <div className="sp-my-column is-gold">
+                <span className="sp-stack is-empty">—</span>
+                <GemToken color="gold" size="sm" count={human.tokens.gold} />
               </div>
             </div>
-            {canAct ? (
-              <div className="sp-take-tray">
-                <div className="sp-tray">
-                  {[0, 1, 2].map((slot) => {
-                    const color = picked[slot];
-                    return (
-                      <button type="button" key={slot} className="sp-tray-slot" data-filled={color !== undefined}
-                        onClick={() => color ? handleSelectGem(color) : undefined}
-                        aria-label={color ? '移除' : '空槽位'}>
-                        {color ? <GemToken color={color} size="xs" /> : <i>＋</i>}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button type="button" className="sp-primary-button" disabled={!canTake}
-                  onClick={() => action({ kind: 'take', colors: picked })}>
-                  确认领取 →
-                </button>
+            <div className="sp-my-reserved">
+              <div className="sp-portfolio-label">预留发展卡
+                <small>{human.reserved.length}/{view.rules.reserveLimit} · 只差 1 枚筹码时可锁定并获黄金</small></div>
+              <div className="sp-reserved-row">
+                {human.reserved.map((card, slot) => (
+                  <div key={card.id} className="sp-reserved-item" data-color={card.bonus}>
+                    <GemToken color={card.bonus} size="xs" />
+                    <span className="sp-reserved-vp">{card.points || '—'} VP</span>
+                    <span className="sp-reserved-costs">
+                      {GEM_COLORS.filter((color) => card.cost[color] > 0).map((color) => (
+                        <em key={color} data-color={color}>{card.cost[color]}</em>
+                      ))}
+                    </span>
+                    {canAct && canDo({ kind: 'buy', source: 'reserved', slot }) ? (
+                      <button type="button" className="sp-reserved-buy"
+                        onClick={() => action({ kind: 'buy', source: 'reserved', slot })}>购入</button>
+                    ) : null}
+                  </div>
+                ))}
+                {!human.reserved.length ? <span className="sp-empty-note">暂无预留发展卡</span> : null}
               </div>
-            ) : null}
+            </div>
           </section>
-        </div>
+        ) : null}
 
         <footer className="sp-controls">
           <div className="sp-controls-left">
             <button type="button" className="sp-control-primary" disabled={snap.status === 'finished' || replaying}
               onClick={() => session.toggle()}>{snap.status === 'running' ? 'Ⅱ 暂停' : '▶ 继续'}</button>
-            <button type="button" disabled={snap.status === 'finished' || replaying || actingSeat === config.humanSeat}
+            <button type="button" disabled={snap.status === 'finished' || replaying || actingSeat === humanSeat}
               onClick={() => session.stepOnce()}>▷ 单步</button>
             <span className="sp-control-divider" />
             {SPEEDS.map((speed) => <button type="button" key={speed} data-active={snap.speed === speed}
@@ -308,55 +418,6 @@ export function GameStage({ config, onExit }: GameStageProps) {
           aria-label={sideOpen ? '收起信息面板' : '展开信息面板'}>{sideOpen ? '›' : '‹'}</button>
         {sideOpen ? (
           <>
-            <section className="sp-side-section sp-side-player">
-              <div className="sp-side-heading">
-                <SeatSigil seat={inspectedSeat} small />
-                <div><h3>{PLAYER_NAMES[inspectedSeat]}</h3>
-                  <small>{inspectedSeat === config.humanSeat ? '真人席位' : aiLevel.label + ' AI 商会'}</small></div>
-                <span className="sp-side-vp"><b>{viewer.points}</b><small>VP</small></span>
-              </div>
-              <div className="sp-portfolio-label">永久折扣 <small>点亮发展卡</small></div>
-              <div className="sp-bonus-inventory">
-                {GEM_COLORS.map((color) => (
-                  <span key={color} className={'sp-stack' + (bonusesOf(viewer)[color] === 0 ? ' is-empty' : '')}
-                    data-color={color}>{bonusesOf(viewer)[color]}</span>
-                ))}
-              </div>
-              <div className="sp-portfolio-label">宝石筹码 <small>上限 {view.rules.tokenLimit} 枚</small></div>
-              <div className="sp-inventory">
-                {([...GEM_COLORS, 'gold'] as TokenColor[]).filter((color) => viewer.tokens[color] > 0).map((color) => (
-                  <GemToken key={color} color={color} size="sm" count={viewer.tokens[color]} />
-                ))}
-                {tokenCount(viewer.tokens) === 0 ? <span className="sp-empty-note">尚无筹码</span> : null}
-              </div>
-              <div className="sp-portfolio-label">预留卡 <small>{viewer.reserved.length}/{view.rules.reserveLimit}</small></div>
-              <div className="sp-reserved-row">
-                {viewer.reserved.map((card, slot) => (
-                  <div key={card.id} className="sp-reserved-item" data-color={card.bonus}>
-                    <GemToken color={card.bonus} size="xs" />
-                    <span className="sp-reserved-vp">{card.points || '—'} VP</span>
-                    <span className="sp-reserved-costs">
-                      {GEM_COLORS.filter((color) => card.cost[color] > 0).map((color) => (
-                        <em key={color} data-color={color}>{card.cost[color]}</em>
-                      ))}
-                    </span>
-                    {canAct && inspectedSeat === actingSeat && canDo({ kind: 'buy', source: 'reserved', slot }) ? (
-                      <button type="button" className="sp-reserved-buy" onClick={() => action({ kind: 'buy', source: 'reserved', slot })}>购入</button>
-                    ) : null}
-                  </div>
-                ))}
-                {!viewer.reserved.length ? <span className="sp-empty-note">暂无预留发展卡</span> : null}
-              </div>
-              {viewer.nobles.length ? (
-                <>
-                  <div className="sp-portfolio-label">到访贵族 <small>+{viewer.nobles.length * 3} VP</small></div>
-                  <div className="sp-portfolio-nobles">
-                    {viewer.nobles.map((noble) => <i key={noble.id} title={'贵族 ' + noble.id}>♛</i>)}
-                  </div>
-                </>
-              ) : null}
-            </section>
-
             <section className="sp-side-section sp-side-ai">
               <div className="sp-side-heading"><div><span className="sp-eyebrow">STRATEGY DESK</span><h3>AI 决策观察</h3></div>
                 <span className="sp-ai-level" title={aiLevel.description}>{aiLevel.label}</span>
@@ -379,7 +440,7 @@ export function GameStage({ config, onExit }: GameStageProps) {
             </section>
 
             <section className="sp-side-section sp-side-events">
-              <div className="sp-side-heading"><div><span className="sp-eyebrow">TRADE LEDGER</span><h3>商会记事簿</h3></div></div>
+              <div className="sp-side-heading"><div><span className="sp-eyebrow">TRADE LEDGER</span><h3>交易记事簿</h3></div></div>
               <div className="sp-event-list">
                 {snap.log.slice(0, 22).map((event, index) => (
                   <div className="sp-event" key={event.turn + '-' + index} data-kind={event.kind}>
@@ -393,6 +454,89 @@ export function GameStage({ config, onExit }: GameStageProps) {
           </>
         ) : null}
       </aside>
+
+      {/* 悬浮玩家档案：锚定在触发席位旁的气泡，不参与文档流、不撑高任何面板 */}
+      {fileAnchor ? (() => {
+        const fileSeat = fileAnchor.inspectedSeat;
+        const player = view.players[fileSeat];
+        const stacks = bonusesOf(player);
+        const popWidth = 384;
+        // 触发元素在页面上半部时气泡朝下弹出，否则朝上（席位都位于页面下半部）
+        const placeAbove = fileAnchor.top > window.innerHeight * 0.45;
+        const maxHeight = placeAbove
+          ? fileAnchor.top - 24
+          : window.innerHeight - fileAnchor.bottom - 24;
+        return (
+          <div className="sp-file-pop" style={{
+            left: Math.min(Math.max(12, fileAnchor.cx - popWidth / 2), window.innerWidth - popWidth - 12),
+            maxHeight,
+            ...(placeAbove
+              ? { bottom: window.innerHeight - fileAnchor.top + 10 }
+              : { top: fileAnchor.bottom + 10 }),
+          } as CSSProperties}>
+            <div className="sp-file-head">
+              <div><span className="sp-eyebrow">PLAYER FILE</span><h3>{PLAYER_NAMES[fileSeat]} 档案</h3></div>
+              <button type="button" className="sp-file-close"
+                onClick={() => setFileAnchor(null)} aria-label="关闭玩家档案">✕</button>
+            </div>
+            <div className="sp-player-file">
+              <div className="sp-file-vp-breakdown">
+                <span className="sp-file-seat"><SeatSigil seat={fileSeat} small />{PLAYER_NAMES[fileSeat]}</span>
+                <b className="sp-file-total">{player.points}<small>VP</small></b>
+              </div>
+              <dl className="sp-file-vp-split">
+                <div><dt>发展卡 {player.cards.length} 张</dt><dd>+{player.cards.reduce((sum, card) => sum + card.points, 0)} 分</dd></div>
+                <div><dt>贵族 {player.nobles.length} 位</dt><dd>+{player.nobles.length * 3} 分</dd></div>
+              </dl>
+              <div className="sp-file-label">已购发展卡</div>
+              {player.cards.length ? (
+                <ul className="sp-file-cards">
+                  {[3, 2, 1].map((tier) => player.cards.filter((card) => card.tier === tier).map((card) => (
+                    <li key={card.id} className="sp-file-card" data-color={card.bonus}>
+                      <GemToken color={card.bonus} size="xs" />
+                      <span className="sp-file-card-name">{ROMANS[tier]} 阶 · {TIER_NAMES[tier]}</span>
+                      <b>{card.points || '—'} 分</b>
+                    </li>
+                  )))}
+                </ul>
+              ) : <p className="sp-empty-note">尚未购入任何发展卡。</p>}
+              <div className="sp-file-label">拜访贵族</div>
+              {player.nobles.length ? (
+                <div className="sp-file-nobles">
+                  {player.nobles.map((noble) => (
+                    <span key={noble.id} className="sp-file-noble" title={noble.id}>
+                      <NobleChip noble={noble} /><b>+3</b>
+                    </span>
+                  ))}
+                </div>
+              ) : <p className="sp-empty-note">还未赢得贵族到访。</p>}
+              {player.reserved.length ? (
+                <>
+                  <div className="sp-file-label">预留卡 {player.reserved.length} 张</div>
+                  <div className="sp-file-reserved">
+                    {player.reserved.map((card) => (
+                      <span key={card.id} className="sp-mini-card" data-color={card.bonus}>{card.points || ''}</span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              <div className="sp-file-label">资产</div>
+              <div className="sp-file-tokens">
+                {([...GEM_COLORS, 'gold'] as TokenColor[]).map((color) => (
+                  <GemToken key={color} color={color} size="xs" count={player.tokens[color]} />
+                ))}
+              </div>
+              <div className="sp-file-label">永久折扣</div>
+              <div className="sp-file-stacks">
+                {GEM_COLORS.map((color) => (
+                  <span key={color} className={'sp-stack' + (stacks[color] === 0 ? ' is-empty' : '')}
+                    data-color={color}>{stacks[color]}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
     </div>
   );
 }

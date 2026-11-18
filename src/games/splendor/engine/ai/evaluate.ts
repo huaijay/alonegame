@@ -215,6 +215,20 @@ function finalTurnGain(state: GameState, player: Player, discounts: Gems, target
   return best;
 }
 
+/**
+ * 判断某席位在终轮中是否还有行动机会：从当前行动方沿座位顺序到先手玩家之前（不含）。
+ * @param state 终轮局面
+ * @param seat 待判断的玩家序号
+ * @returns 该席位仍可行动时为真
+ */
+function stillToAct(state: GameState, seat: number): boolean {
+  const { current, firstPlayer, players } = state;
+  for (let index = current; index !== firstPlayer; index = (index + 1) % players.length) {
+    if (index === seat) return true;
+  }
+  return false;
+}
+
 function collect(state: GameState, workspace: EvaluationWorkspace): void {
   fillMarket(state, workspace.market);
   for (let seat = 0; seat < state.players.length; seat += 1) {
@@ -236,7 +250,7 @@ function collect(state: GameState, workspace: EvaluationWorkspace): void {
     if (state.finalRound) {
       // 已行动的席位没有下一回合，剩余筹码和长期折扣不再有独立价值。
       parts.points = player.points * 1000 - player.cards.length;
-      if (seat >= state.current) {
+      if (stillToAct(state, seat)) {
         // 公开牌仍可能被前手抢走，潜力保留折扣，真正终局由规则胜者覆盖。
         parts.targets = finalTurnGain(state, player, discounts, workspace.targets) * 750;
       }

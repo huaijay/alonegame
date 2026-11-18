@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { DEVELOPMENT_CARDS } from '../engine/cards';
 import { classicRulesFor, RULE_LIMITS } from '../engine/config';
 import { AI_LEVELS, DEFAULT_AI_STRENGTH } from '../engine/ai/levels';
-import { PLAYER_NAMES } from '../engine/board';
 import type { AiStrength, GameConfig, GameRules } from '../engine/types';
 import { DevelopmentCardView } from './DevelopmentCardView';
 import { GemToken } from './GemToken';
@@ -14,9 +13,9 @@ interface SetupScreenProps {
 /** 将可选的变体规则排成紧凑两列；经典值依人数变化。 */
 const ADVANCED_FIELDS: { key: keyof GameRules; label: string; unit: string; hint: string }[] = [
   { key: 'tokenLimit', label: '持有筹码上限', unit: '枚', hint: '超过上限，回合结束自动退回多余筹码。' },
-  { key: 'reserveLimit', label: '最多预留卡牌', unit: '张', hint: '每位商会最多锁定的发展卡数量。' },
+  { key: 'reserveLimit', label: '最多预留卡牌', unit: '张', hint: '每位玩家最多锁定的发展卡数量。' },
   { key: 'marketSize', label: '每阶公开卡牌', unit: '张', hint: '每阶市场展示的可购买或预留卡片。' },
-  { key: 'nobleCount', label: '贵族出场数量', unit: '位', hint: '经典规则为商会人数 + 1。' },
+  { key: 'nobleCount', label: '贵族出场数量', unit: '位', hint: '经典规则为玩家人数 + 1。' },
   { key: 'gemSupply', label: '每色普通宝石', unit: '枚', hint: '五种普通宝石的初始数量均设为此值。' },
   { key: 'goldSupply', label: '黄金通配筹码', unit: '枚', hint: '黄金只能通过预留牌获得，耗尽仍可预留。' },
   { key: 'doubleTakeMinimum', label: '双取所需库存', unit: '枚', hint: '银行同色至少有这么多枚，才可领取两枚。' },
@@ -50,17 +49,15 @@ function RuleSetting({ item, value, classic, onChange }: RuleSettingProps) {
 }
 
 /**
- * 珠宝商会开局页：选择人数、席位、AI 强度与本局规则。
- * @param props 开局回调，接收所选强度与完整对局配置
+ * 璀璨宝石开局页：选择玩家数量、对局模式、游戏难度与本局规则。
+ * @param props 开局回调，接收所选难度与完整对局配置
  * @returns 支持键盘操作的开局配置界面
  */
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [count, setCount] = useState<2 | 3 | 4>(3);
   const [human, setHuman] = useState(false);
   const [strength, setStrength] = useState<AiStrength>(DEFAULT_AI_STRENGTH);
-  const [humanSeat, setHumanSeat] = useState(0);
   const [delay, setDelay] = useState(1000);
-  const [seedText, setSeedText] = useState(() => String(Date.now() >>> 0));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [ruleOverrides, setRuleOverrides] = useState<Partial<GameRules>>({});
   const classic = classicRulesFor(count);
@@ -71,23 +68,16 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     setRuleOverrides((previous) => ({ ...previous, [key]: value }));
   };
   const sample = [DEVELOPMENT_CARDS[8], DEVELOPMENT_CARDS[43], DEVELOPMENT_CARDS[74]];
-  const rulesSummary = [
-    ['01 · 采集宝石', `每回合可拿三种不同颜色，或取两枚同色（银行至少剩 ${rules.doubleTakeMinimum} 枚）。`],
-    ['02 · 投资发展', '宝石可购买发展卡，发展卡提供永久同色折扣与声望。'],
-    ['03 · 预留卡牌', `最多持有 ${rules.reserveLimit} 张预留卡，预留时若有黄金则领取一枚通配筹码。`],
-    ['04 · 贵族到访', `本局有 ${rules.nobleCount} 位贵族，永久折扣满足条件时每回合最多拜访一位，每位 3 分。`],
-    ['05 · 最后结算', `有人达到 ${rules.victoryPoints} 分后打完当前轮；同分比谁买的卡更少。`],
-  ];
 
   const begin = () => {
-    const parsed = Number(seedText);
     onStart({
       playerCount: count,
       aiStrength: strength,
-      humanSeat: human ? humanSeat : null,
+      // 亲自入局固定为玩家 1；先手顺序由对局随机决定。
+      humanSeat: human ? 0 : null,
       turnDelayMs: delay,
       rules,
-      seed: Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : Date.now() >>> 0,
+      seed: Date.now() >>> 0,
     });
   };
 
@@ -97,22 +87,22 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         <div className="sp-crest" aria-hidden="true"><span>✦</span><span>◆</span><span>✦</span></div>
         <p className="sp-eyebrow">THE RENAISSANCE JEWEL EXCHANGE</p>
         <h1>璀璨<span>宝石</span></h1>
-        <p className="sp-setup-subtitle">一场关于财富、声望与远见的文艺复兴商会竞逐。</p>
+        <p className="sp-setup-subtitle">一场关于财富、声望与远见的文艺复兴竞逐。</p>
         <div className="sp-ornament" aria-hidden="true">◈ ─── ✧ ─── ◈</div>
       </header>
       <div className="sp-setup-layout">
         <section className="sp-paper sp-form-panel">
           <div className="sp-panel-heading">
             <span className="sp-eyebrow">01 / YOUR TABLE</span>
-            <h2>开设交易席位</h2>
-            <p>在观赛模式中让所有商会自动对弈；也可选择自己的商会席位，与 AI 同台竞逐。</p>
+            <h2>创建对局</h2>
+            <p>选择 2–4 位玩家；可全程观赛，或亲自入局与 AI 同台竞逐。</p>
           </div>
           <div className="sp-field">
-            <div className="sp-field-title"><span>参与商会</span><b>{count} 位</b></div>
+            <div className="sp-field-title"><span>玩家数量</span><b>{count} 位</b></div>
             <div className="sp-choice-grid">
               {([2, 3, 4] as const).map((num) => (
-                <button type="button" key={num} data-active={count === num} onClick={() => { setCount(num); setHumanSeat((seat) => Math.min(seat, num - 1)); }}>
-                  <strong>{String(num).padStart(2, '0')}</strong><span>席商会</span>
+                <button type="button" key={num} data-active={count === num} onClick={() => setCount(num)}>
+                  <strong>{String(num).padStart(2, '0')}</strong><span>位玩家</span>
                 </button>
               ))}
             </div>
@@ -122,16 +112,16 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             <div className="sp-mode-choices">
               <button type="button" data-active={!human} onClick={() => setHuman(false)}>
                 <b>✦　AI 自动对弈</b>
-                <small>所有席位自动交易，可暂停、单步与回放</small>
+                <small>所有玩家自动交易，可暂停、单步与回放</small>
               </button>
               <button type="button" data-active={human} onClick={() => setHuman(true)}>
                 <b>♛　亲自入局</b>
-                <small>指定你的商会席位，其余由 AI 驱动</small>
+                <small>你扮演玩家 1，其余由 AI 驱动</small>
               </button>
             </div>
           </div>
           <fieldset className="sp-strength-field">
-            <legend>算法强度</legend>
+            <legend>游戏难度</legend>
             <div className="sp-strength-choices">
               {AI_LEVELS.map((level) => (
                 <label key={level.id} className="sp-strength-option" data-active={strength === level.id}>
@@ -150,19 +140,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 </label>
               ))}
             </div>
-            <p className="sp-field-hint">应用于本局全部 AI 商会，重开保留。较高档位会多花一些时间规划。</p>
+            <p className="sp-field-hint">应用于本局全部 AI 玩家，重开保留。较高档位会多花一些时间规划。</p>
           </fieldset>
-          {human ? (
-            <div className="sp-field">
-              <div className="sp-field-title"><span>我的商会席位</span><b>{PLAYER_NAMES[humanSeat]}</b></div>
-              <div className="sp-seat-choices">
-                {Array.from({ length: count }, (_, seat) => (
-                  <button type="button" key={seat} data-active={humanSeat === seat}
-                    onClick={() => setHumanSeat(seat)}>{seat + 1} · {PLAYER_NAMES[seat]}</button>
-                ))}
-              </div>
-            </div>
-          ) : null}
           <div className="sp-field sp-win-field">
             <div className="sp-field-title"><span>获胜声望目标</span><b>{rules.victoryPoints} 分</b></div>
             <input type="range" min={RULE_LIMITS.victoryPoints[0]} max={RULE_LIMITS.victoryPoints[1]}
@@ -177,7 +156,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 </button>
               ))}
             </div>
-            <p className="sp-field-hint">范围 5–30 分；达到目标的回合结束后仍让其他商会完成本轮。</p>
+            <p className="sp-field-hint">范围 5–30 分；达到目标的回合结束后仍让其他玩家完成本轮。</p>
           </div>
           <div className="sp-advanced">
             <button type="button" className="sp-advanced-toggle"
@@ -206,47 +185,67 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               onChange={(event) => setDelay(Number(event.target.value))} aria-label="行动间隔" />
             <p className="sp-field-hint">游戏开始后仍可调快速度或单步观察。</p>
           </div>
-          <div className="sp-field">
-            <div className="sp-field-title"><span>洗牌种子</span><b>可重现</b></div>
-            <div className="sp-seed-row">
-              <input type="number" min={0} value={seedText}
-                onChange={(event) => setSeedText(event.target.value)} aria-label="洗牌种子" />
-              <button type="button" onClick={() => setSeedText(String(Date.now() >>> 0))}>换一组</button>
-            </div>
-          </div>
           <button type="button" className="sp-primary-button sp-start-button" onClick={begin}>
             进入珠宝交易所 <span>→</span>
           </button>
         </section>
-        <div className="sp-preview-column">
-          <section className="sp-paper sp-showcase">
-            <div className="sp-panel-heading">
-              <span className="sp-eyebrow">02 / THE TREASURE</span>
-              <h2>从矿山到传奇行会</h2>
-              <p>90 张发展卡、三阶供应市场，每张牌都是迈向声望的投资。</p>
+        <section className="sp-paper sp-howto">
+          <div className="sp-panel-heading">
+            <span className="sp-eyebrow">02 / HOW TO PLAY</span>
+            <h2>新手规则 · 三分钟上手</h2>
+            <p>目标是率先赢得 {rules.victoryPoints} 声望：从矿山采集宝石，投资发展卡，赢得贵族青睐。</p>
+          </div>
+          <div className="sp-preview-cards">
+            {sample.map((card) => <DevelopmentCardView key={card.id} card={card} />)}
+          </div>
+          <div className="sp-preview-tokens">
+            <span>珍宝储备</span>
+            {(['white', 'blue', 'green', 'red', 'black', 'gold'] as const).map((color) => (
+              <GemToken key={color} color={color} size="sm" />
+            ))}
+          </div>
+          <div className="sp-howto-steps">
+            <div className="sp-howto-step">
+              <div className="sp-howto-visual" aria-hidden="true">
+                <GemToken color="white" size="sm" /><GemToken color="blue" size="sm" /><GemToken color="green" size="sm" />
+                <span className="sp-howto-or">或</span>
+                <GemToken color="red" size="sm" /><GemToken color="red" size="sm" />
+              </div>
+              <div className="sp-howto-copy"><strong>01 · 采集宝石</strong>
+                <p>每回合可拿三种不同颜色，或取两枚同色（银行至少剩 {rules.doubleTakeMinimum} 枚）。</p></div>
             </div>
-            <div className="sp-preview-cards">
-              {sample.map((card) => <DevelopmentCardView key={card.id} card={card} />)}
+            <div className="sp-howto-step">
+              <div className="sp-howto-visual" aria-hidden="true">
+                <GemToken color="green" size="sm" /><span className="sp-howto-arrow">→</span>
+                <span className="sp-howto-card"><i>◆</i><b>VP</b></span>
+              </div>
+              <div className="sp-howto-copy"><strong>02 · 投资发展</strong>
+                <p>宝石可购买发展卡，发展卡提供永久同色折扣与声望。</p></div>
             </div>
-            <div className="sp-preview-tokens">
-              <span>珍宝储备</span>
-              {(['white', 'blue', 'green', 'red', 'black', 'gold'] as const).map((color) => (
-                <GemToken key={color} color={color} size="sm" />
-              ))}
+            <div className="sp-howto-step">
+              <div className="sp-howto-visual" aria-hidden="true">
+                <GemToken color="gold" size="sm" /><span className="sp-howto-arrow">→</span>
+                <span className="sp-howto-reserve">预留</span>
+              </div>
+              <div className="sp-howto-copy"><strong>03 · 预留卡牌</strong>
+                <p>最多持有 {rules.reserveLimit} 张；只差 1 枚筹码买入时才能锁定公开牌，锁定即得一枚黄金。</p></div>
             </div>
-          </section>
-          <section className="sp-paper sp-rules">
-            <div className="sp-panel-heading">
-              <span className="sp-eyebrow">03 / HOUSE RULES</span>
-              <h2>交易所守则</h2>
+            <div className="sp-howto-step">
+              <div className="sp-howto-visual sp-howto-visual-noble" aria-hidden="true">
+                <span className="sp-howto-crown">♛</span><span className="sp-howto-plus">+3</span>
+              </div>
+              <div className="sp-howto-copy"><strong>04 · 贵族到访</strong>
+                <p>本局有 {rules.nobleCount} 位贵族，永久折扣满足条件时每回合最多拜访一位，每位 3 分。</p></div>
             </div>
-            <div className="sp-rule-list">
-              {rulesSummary.map(([name, detail]) => (
-                <div key={name}><strong>{name}</strong><p>{detail}</p></div>
-              ))}
+            <div className="sp-howto-step">
+              <div className="sp-howto-visual sp-howto-visual-score" aria-hidden="true">
+                <b>{rules.victoryPoints}</b><span>VP</span>
+              </div>
+              <div className="sp-howto-copy"><strong>05 · 最后结算</strong>
+                <p>有人达到 {rules.victoryPoints} 分后打完当前轮；同分比谁买的卡更少。</p></div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </div>
   );

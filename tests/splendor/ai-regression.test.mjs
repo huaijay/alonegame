@@ -192,9 +192,11 @@ test('四人最后一轮不会因声望单位变化而误把确定反超当成�
   ], [], []];
   state.players[0].points = 14;
   state.players[0].cards = Array.from({ length: 3 }, (_, index) => card('white-engine-' + index, 0, 'white'));
+  // 黑卡费用 3：给 2 枚黑筹码使缺口恰为 1，预留动作才在变体规则下合法
+  state.players[0].tokens = { ...emptyTokens(), black: 2 };
   state.players[3].points = 14;
   state.players[3].tokens = { ...emptyTokens(), black: 3 };
-  state.bank.black -= 3;
+  state.bank.black -= 5;
   // 中间两席已满预留，且无筹码和折扣，一手内既无法抢走黑卡也无法购入它。
   for (const seat of [1, 2]) state.players[seat].reserved = [
     card('unaffordable-' + seat, 1, 'red', { white: 7, blue: 7, green: 7, red: 7, black: 7 }),
@@ -229,6 +231,7 @@ test('候选扩展允许选择贵族，避免默认数组顺序把胜局交给�
 
 test('高档位显式退筹变体均合法，基础行动完整保留', () => {
   const state = createInitialState(3, 299, { tokenLimit: 6 });
+  state.current = 0;
   state.players[0].tokens = { white: 2, blue: 2, green: 2, red: 0, black: 0, gold: 0 };
   for (const color of ['white', 'blue', 'green']) state.bank[color] -= 2;
   const crowded = JSON.parse(readFileSync(new URL('./token-limit-position.json', import.meta.url), 'utf8')).state;

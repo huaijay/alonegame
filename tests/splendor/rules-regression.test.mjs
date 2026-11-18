@@ -35,6 +35,7 @@ test('无事件快路径与正式规则在真实固定局面全部合法行动�
 
 test('连续自动退筹使用更新后的剩余持仓，不重复丢掉已不足的目标颜色', () => {
   const state = createInitialState(2, 12, { tokenLimit: 6, nobleCount: 0 });
+  state.current = 0;
   state.market = [[{ id: 'return-target', tier: 1, bonus: 'white', points: 1,
     cost: { ...emptyGems(), blue: 2, green: 1 } }], [], []];
   state.decks = [[], [], []];

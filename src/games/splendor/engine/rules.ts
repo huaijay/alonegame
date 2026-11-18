@@ -32,6 +32,21 @@ function paymentWithDiscounts(card: DevelopmentCard, player: Player, discounts: 
 }
 
 /**
+ * 计算买入目标还差多少枚实体筹码：普通宝石优先抵扣，黄金按通配补足剩余缺口。
+ * @param card 目标发展卡
+ * @param player 行动方当前持仓
+ * @param discounts 行动方已拥有的永久折扣
+ * @returns 还需额外领取的筹码枚数；买得起时为 0
+ */
+export function chipsMissing(card: DevelopmentCard, player: Player, discounts: Gems): number {
+  let missing = 0;
+  for (const color of GEM_COLORS) {
+    missing += Math.max(0, card.cost[color] - discounts[color] - player.tokens[color]);
+  }
+  return Math.max(0, missing - player.tokens.gold);
+}
+
+/**
  * 返回优先使用普通宝石、再以黄金补足的最小支付方案。
  * @param card 待购买的发展卡
  * @param player 买方当前持仓
@@ -79,13 +94,15 @@ export function createInitialState(
   ];
   const market = decks.map((deck) => deck.splice(0, rules.marketSize)) as GameState['market'];
   const nobles = shuffled(NOBLES, rng).slice(0, rules.nobleCount);
+  // 先手玩家随种子随机，避免每局都由同一席位开场。
+  const firstPlayer = Math.floor(rng() * playerCount);
   return {
     rules,
     players: Array.from({ length: playerCount }, () => ({
       tokens: emptyTokens(), cards: [], reserved: [], nobles: [], points: 0,
     })),
     bank, decks, market, nobles,
-    current: 0, turn: 0, finalRound: false, phase: 'playing', winners: [],
+    current: firstPlayer, firstPlayer, turn: 0, finalRound: false, phase: 'playing', winners: [],
   };
 }
 
@@ -125,13 +142,12 @@ export function getLegalMoves(state: GameState): Move[] {
       if (card !== null && paymentWithDiscounts(card, player, discounts)) {
         moves.push({ kind: 'buy', source: 'market', tier, slot });
       }
-      if (card !== null && player.reserved.length < state.rules.reserveLimit) {
+      // 变体规则：仅当只差一枚筹码即可买入时才允许预留，锁定目标并获得通配黄金。
+      if (card !== null && player.reserved.length < state.rules.reserveLimit &&
+          chipsMissing(card, player, discounts) === 1) {
         moves.push({ kind: 'reserve', tier, slot });
       }
     });
-    if (state.decks[tierIndex].length > 0 && player.reserved.length < state.rules.reserveLimit) {
-      moves.push({ kind: 'reserve', tier, slot: null });
-    }
   }
   player.reserved.forEach((card, slot) => {
     if (paymentWithDiscounts(card, player, discounts)) moves.push({ kind: 'buy', source: 'reserved', slot });
@@ -263,17 +279,7 @@ function applyMoveCore(state: GameState, move: Move, events?: GameEvent[]): Game
       break;
     }
     case 'reserve': {
-      const index = move.tier - 1;
-      let card: DevelopmentCard;
-      if (move.slot === null) {
-        const top = next.decks[index][0];
-        if (!top) throw new Error('目标发展卡不存在');
-        card = top;
-        next.decks = [...next.decks] as GameState['decks'];
-        next.decks[index] = next.decks[index].slice(1);
-      } else {
-        card = removeMarketCard(next, index, move.slot);
-      }
+      const card = removeMarketCard(next, move.tier - 1, move.slot);
       player.reserved = [...player.reserved, card];
       if (next.bank.gold > 0) {
         next.bank.gold -= 1;
@@ -336,7 +342,7 @@ function applyMoveCore(state: GameState, move: Move, events?: GameEvent[]): Game
   }
   next.turn += 1;
   next.current = (seat + 1) % next.players.length;
-  if (next.finalRound && next.current === 0) {
+  if (next.finalRound && next.current === next.firstPlayer) {
     next.phase = 'finished';
     next.winners = determineWinners(next.players);
     event?.('finish', '本局结束 · ' + next.winners.map((index) => PLAYER_NAMES[index]).join('、') + ' 获胜');

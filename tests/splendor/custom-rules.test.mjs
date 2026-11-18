@@ -59,6 +59,8 @@ test('游戏规则输入范围校验：非整数、越界或非数值不能进�
 test('自定义 8 分与 20 分阈值驱动终局、事件和并列判定，不再写死 15 分', () => {
   for (const points of [8, 20]) {
     const state = createInitialState(3, 2, { victoryPoints: points, nobleCount: 0 });
+    state.current = 0;
+    state.firstPlayer = 0;
     state.players[0].points = points - 2;
     state.market[0][0] = pointsCard(1);
     let result = applyMove(state, { kind: 'buy', source: 'market', tier: 1, slot: 0 });
@@ -88,10 +90,15 @@ test('自定义筹码上限、双取门槛、黄金储备和预留容量均由�
   assert.equal(tokenCount(result.state.players[0].tokens), 6);
   assert.ok(result.events.some((event) => event.text.includes('超过 6 枚上限')));
   result.state.current = 0;
-  const oldGold = result.state.players[0].tokens.gold;
+  // 只差 1 枚白筹码的卡允许预留；黄金储备为 0 时不发放黄金
+  result.state.market[0][0] = {
+    id: 'custom-lock', tier: 1, bonus: 'white', points: 0,
+    cost: { white: 3, blue: 0, green: 0, red: 0, black: 0 },
+  };
+  result.state.players[0].tokens = { white: 2, blue: 1, green: 1, red: 1, black: 0, gold: 0 };
   result = applyMove(result.state, { kind: 'reserve', tier: 1, slot: 0 });
   assert.equal(result.state.players[0].reserved.length, 1);
-  assert.equal(result.state.players[0].tokens.gold, oldGold);
+  assert.equal(result.state.players[0].tokens.gold, 0);
   result.state.current = 0;
   assert.equal(getLegalMoves(result.state).some((move) => move.kind === 'reserve'), false);
   assert.deepEqual(getLegalMoves(createInitialState(2, 1, { doubleTakeMinimum: 2 }))
@@ -104,9 +111,14 @@ test('动态预留上限与牌场尺寸影响后续卡位，贵族为零时不�
   });
   assert.equal(initial.nobles.length, 0);
   assert.deepEqual(initial.market.map((row) => row.length), [3, 3, 3]);
+  // 白筹码固定 1 枚：费用 2/3/4/5 的卡在黄金递增后始终只差 1 枚，可连续预留至满
+  const near = (cost) => ({ id: 'near-' + cost, tier: 1, bonus: 'white', points: 0,
+    cost: { white: cost, blue: 0, green: 0, red: 0, black: 0 } });
   let next = initial;
+  next.players[0].tokens = { white: 1, blue: 0, green: 0, red: 0, black: 0, gold: 0 };
   for (let i = 0; i < 4; i++) {
     next.current = 0;
+    next.market[0][0] = near(i + 2);
     next = applyMove(next, { kind: 'reserve', tier: 1, slot: 0 }).state;
   }
   assert.equal(next.players[0].reserved.length, 4);

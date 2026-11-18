@@ -52,6 +52,7 @@ test('标准采集动作：三异色、同色至少 4 枚、不足三色时只�
 
 test('采集并自动归还超额筹码，或显式指定退还颜色', () => {
   const state = createInitialState(4);
+  state.current = 0;
   state.players[0].tokens = { white: 2, blue: 2, green: 2, red: 2, black: 1, gold: 0 };
   const result = applyMove(state, { kind: 'take', colors: ['white', 'blue', 'green'], returns: ['red', 'black'] });
   assert.equal(tokenCount(result.state.players[0].tokens), 10);
@@ -66,6 +67,7 @@ test('采集并自动归还超额筹码，或显式指定退还颜色', () => {
 
 test('购卡：永久折扣抵扣花费，黄金补充，费用归还供应区并翻补新卡', () => {
   const state = createInitialState(2);
+  state.current = 0;
   const card = { id: 'buy-me', tier: 2, bonus: 'green', points: 2,
     cost: { white: 3, blue: 2, green: 0, red: 1, black: 0 } };
   const discountCard = zeroCostCard(0, 'white');
@@ -86,30 +88,41 @@ test('购卡：永久折扣抵扣花费，黄金补充，费用归还供应区�
   assert.equal(state.players[0].cards.length, 1);
 });
 
-test('预留公开牌或盲抽，给予黄金；最多 3 张，黄金耗尽仍允许预留', () => {
-  let state = createInitialState(2);
-  const open = state.market[0][1];
-  const replacement = state.decks[0][0];
-  state = applyMove(state, { kind: 'reserve', tier: 1, slot: 1 }).state;
-  assert.equal(state.players[0].reserved[0].id, open.id);
-  assert.equal(state.players[0].tokens.gold, 1);
-  assert.equal(state.bank.gold, 4);
-  assert.equal(state.market[0][1].id, replacement.id);
+test('预留变体：仅差 1 枚筹码可锁定公开牌并获黄金；盲抽下线，买得起或差得多都禁止', () => {
+  const state = createInitialState(2);
   state.current = 0;
-  state = applyMove(state, { kind: 'reserve', tier: 2, slot: null }).state;
-  assert.equal(state.players[0].reserved.length, 2);
-  assert.equal(state.players[0].reserved[1].tier, 2);
-  state.current = 0;
-  state.bank.gold = 0;
-  state = applyMove(state, { kind: 'reserve', tier: 3, slot: 2 }).state;
-  assert.equal(state.players[0].reserved.length, 3);
-  assert.equal(state.players[0].tokens.gold, 2);
-  state.current = 0;
-  assert.equal(getLegalMoves(state).some((m) => m.kind === 'reserve'), false);
+  const near = { id: 'lock-me', tier: 2, bonus: 'green', points: 1,
+    cost: { white: 3, blue: 2, green: 0, red: 1, black: 0 } };
+  const cheap = { id: 'buy-now', tier: 1, bonus: 'blue', points: 0,
+    cost: { white: 1, blue: 1, green: 0, red: 1, black: 0 } };
+  const filler = { id: 'too-far', tier: 3, bonus: 'black', points: 5,
+    cost: { white: 7, blue: 7, green: 7, red: 7, black: 7 } };
+  state.market = [[cheap, filler, filler, filler], [near, filler, filler, filler],
+    [filler, filler, filler, filler]];
+  state.players[0].tokens = { white: 2, blue: 1, green: 0, red: 1, black: 0, gold: 1 };
+  // 缺口 2 枚由 1 枚黄金补足后仍差 1：只有近卡可预留；买得起与差得多都不出现
+  assert.deepEqual(getLegalMoves(state).filter((m) => m.kind === 'reserve')
+    .map((m) => m.tier + ':' + m.slot), ['2:0']);
+  const replacement = state.decks[1][0];
+  const next = applyMove(state, { kind: 'reserve', tier: 2, slot: 0 }).state;
+  assert.equal(next.players[0].reserved[0].id, 'lock-me');
+  assert.equal(next.players[0].tokens.gold, 2);
+  assert.equal(next.bank.gold, 4);
+  assert.equal(next.market[1][0].id, replacement.id);
+  // 盲抽已整体移除，构造该动作也会被合法性校验拒绝
+  assert.throws(() => applyMove(state, { kind: 'reserve', tier: 1, slot: null }), /不允许/);
+  // 预留容量仍受 reserveLimit 限制
+  const limited = createInitialState(2, 42, { reserveLimit: 1 });
+  limited.current = 0;
+  limited.market[1][0] = near;
+  limited.players[0].tokens = { white: 2, blue: 1, green: 0, red: 1, black: 0, gold: 1 };
+  const after = applyMove(limited, { kind: 'reserve', tier: 2, slot: 0 }).state;
+  assert.equal(getLegalMoves(after).some((m) => m.kind === 'reserve'), false);
 });
 
 test('贵族在回合结束自动到访且每回合最多一位', () => {
   const state = createInitialState(2);
+  state.current = 0;
   state.nobles = NOBLES.slice(0, 2);
   state.players[0].cards = Array.from({ length: 5 }, (_, color) =>
     Array.from({ length: 4 }, (_, i) => ({ ...zeroCostCard(0, GEM_COLORS[color]), id: color + '-' + i }))).flat();
@@ -125,6 +138,8 @@ test('贵族在回合结束自动到访且每回合最多一位', () => {
 
 test('15 分触发最后一整轮，完赛后最多分且同分购卡少者获胜', () => {
   const state = createInitialState(3);
+  state.current = 0;
+  state.firstPlayer = 0;
   state.players[0].points = 14;
   state.market[0][0] = zeroCostCard(1);
   let next = applyMove(state, { kind: 'buy', source: 'market', tier: 1, slot: 0 }).state;

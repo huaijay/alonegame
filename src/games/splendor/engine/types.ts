@@ -73,6 +73,8 @@ export interface GameState {
   market: [(DevelopmentCard | null)[], (DevelopmentCard | null)[], (DevelopmentCard | null)[]];
   nobles: Noble[];
   current: number;
+  /** 本局最先行动的玩家序号，用于在终轮回到起点时判定结束。 */
+  firstPlayer: number;
   turn: number;
   finalRound: boolean;
   phase: 'playing' | 'finished';
@@ -82,7 +84,7 @@ export interface GameState {
 export type Move =
   | { kind: 'take'; colors: GemColor[]; returns?: TokenColor[] }
   | { kind: 'double'; color: GemColor; returns?: TokenColor[] }
-  | { kind: 'reserve'; tier: Tier; slot: number | null; returns?: TokenColor[] }
+  | { kind: 'reserve'; tier: Tier; slot: number; returns?: TokenColor[] }
   | { kind: 'buy'; source: 'market'; tier: Tier; slot: number; nobleId?: string }
   | { kind: 'buy'; source: 'reserved'; slot: number; nobleId?: string }
   | { kind: 'pass' };

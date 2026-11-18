@@ -80,7 +80,7 @@ export function describeMove(state: GameState, move: Move): string {
   switch (move.kind) {
     case 'take': return '拿取 ' + move.colors.map((color) => GEM_NAMES[color]).join(' · ');
     case 'double': return '双取 ' + GEM_NAMES[move.color];
-    case 'reserve': return '预留 ' + move.tier + ' 阶' + (move.slot === null ? '盲牌' : '卡 ' + (move.slot + 1));
+    case 'reserve': return '预留 ' + move.tier + ' 阶卡 ' + (move.slot + 1);
     case 'buy': {
       const card = move.source === 'market'
         ? state.market[move.tier - 1][move.slot]

@@ -9,7 +9,7 @@ export const GEM_NAMES: Record<GemColor, string> = {
   black: '黑玛瑙',
 };
 
-export const PLAYER_NAMES = ['琥珀商会', '夜莺商会', '银月商会', '翡翠商会'] as const;
+export const PLAYER_NAMES = ['玩家一', '玩家二', '玩家三', '玩家四'] as const;
 
 /** 构造独立的五色计数，避免跨玩家共享可变引用。 */
 export function emptyGems(): Gems {
