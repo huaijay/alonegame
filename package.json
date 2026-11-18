@@ -13,7 +13,8 @@
     "bench:ai": "node --import ./scripts/ts-loader.mjs ./scripts/bench-ai.mjs",
     "bench:ai:budgets": "node --import ./scripts/ts-loader.mjs ./scripts/bench-budgets.mjs",
     "bench:azul": "node --import ./scripts/ts-loader.mjs ./scripts/bench-azul-ai.mjs",
-    "bench:azul:budgets": "node --import ./scripts/ts-loader.mjs ./scripts/bench-azul-budgets.mjs"
+    "bench:azul:budgets": "node --import ./scripts/ts-loader.mjs ./scripts/bench-azul-budgets.mjs",
+    "bench:splendor": "node --import ./scripts/ts-loader.mjs ./scripts/bench-splendor-ai.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

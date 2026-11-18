@@ -1,8 +1,9 @@
 import { PLAYER_NAMES } from './board';
 import { analyzeMoves } from './ai/search';
+import { resolveAiStrength } from './ai/levels';
 import type { AiAnalysis } from './ai/search';
 import { applyMove, createInitialState } from './rules';
-import type { GameConfig, GameEvent, GameState, Move } from './types';
+import type { AiStrength, GameConfig, GameEvent, GameState, Move } from './types';
 
 export interface ReplayFrame {
   state: GameState;
@@ -22,17 +23,24 @@ export interface SessionSnapshot {
 
 /** 驱动自动对弈与可选的人类席位；规则与 AI 决策完全复用纯引擎。 */
 export class GameSession {
-  private config: GameConfig;
+  private readonly config: GameConfig & { aiStrength: AiStrength };
   private snapshot: SessionSnapshot;
   private listeners = new Set<() => void>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
 
+  /**
+   * 保存本局配置并生成开局分析，后续回合沿用同一算法强度。
+   * @param config 人数、种子、真人席位、规则与可选 AI 档位
+   * @returns 供界面订阅和推进的会话实例
+   */
   constructor(config: GameConfig) {
-    this.config = config;
+    const strength = resolveAiStrength(config.aiStrength);
     const state = createInitialState(config.playerCount, config.seed, config.rules);
+    // 会话保存独立配置，外部表单变化不会改变重开的规则和强度。
+    this.config = { ...config, aiStrength: strength, rules: { ...state.rules } };
     this.snapshot = {
-      state, status: 'running', speed: 1, log: [], ai: analyzeMoves(state),
+      state, status: 'running', speed: 1, log: [], ai: analyzeMoves(state, { strength: this.config.aiStrength }),
       lastMove: null, frames: [{ state, label: '开局 · 珠宝交易所' }], replayIndex: null,
     };
   }
@@ -75,16 +83,16 @@ export class GameSession {
       state, status, lastMove: move,
       log: [...events, ...this.snapshot.log].slice(0, 180),
       frames: [...this.snapshot.frames, { state, label: PLAYER_NAMES[(state.current + state.players.length - 1) % state.players.length] + ' · ' + labels }],
-      ai: state.phase === 'playing' ? analyzeMoves(state) : null,
+      ai: state.phase === 'playing' ? analyzeMoves(state, { strength: this.config.aiStrength }) : null,
     });
     this.queue();
   }
 
   private stepAi(): void {
-    const { state } = this.snapshot;
+    const { state, ai } = this.snapshot;
     if (state.phase !== 'playing' || state.current === this.config.humanSeat) return;
-    const analysis = analyzeMoves(state);
-    this.commit(analysis.chosen);
+    // playing 快照已经为当前局面完成分析，执行时复用，避免每手搜索两遍。
+    this.commit(ai!.chosen);
   }
 
   /** 开始运行 AI 时间轴。 */
@@ -118,12 +126,15 @@ export class GameSession {
     this.commit(move);
   }
 
-  /** 用原种子重开一局相同的牌序。 */
+  /**
+   * 按创建会话时的种子、规则和 AI 强度重开。
+   * @returns 无返回值；发布新的开局快照并恢复自动调度
+   */
   restart(): void {
     this.clearTimer();
     const state = createInitialState(this.config.playerCount, this.config.seed, this.config.rules);
     this.publish({
-      state, status: 'running', lastMove: null, log: [], ai: analyzeMoves(state),
+      state, status: 'running', lastMove: null, log: [], ai: analyzeMoves(state, { strength: this.config.aiStrength }),
       frames: [{ state, label: '开局 · 珠宝交易所' }], replayIndex: null,
     });
     this.queue();

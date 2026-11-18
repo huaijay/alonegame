@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 import { PLAYER_NAMES } from '../engine/board';
 import { describeMove } from '../engine/ai/search';
+import { aiLevelFor } from '../engine/ai/levels';
 import { bonusesOf, getLegalMoves, moveKey, paymentFor, tokenCount } from '../engine/rules';
 import { GameSession } from '../engine/session';
 import { GEM_COLORS } from '../engine/types';
@@ -79,9 +80,14 @@ function SeatAssets({ view, seat, discountOnly = false }: {
   );
 }
 
-/** 游戏桌面：席位纹章、三阶卡市、宝石银行与可视化决策时间轴。 */
+/**
+ * 展示珠宝交易桌面及本局固定的 AI 强度，所有行动交由会话推进。
+ * @param props 对局配置与退出回调
+ * @returns 支持真人行动、观赛与回放的桌面
+ */
 export function GameStage({ config, onExit }: GameStageProps) {
   const session = useMemo(() => new GameSession(config), [config]);
+  const aiLevel = aiLevelFor(config.aiStrength, config.playerCount);
   const snap = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const [picked, setPicked] = useState<GemColor[]>([]);
   const [inspectedSeat, setInspectedSeat] = useState(config.humanSeat ?? 0);
@@ -137,7 +143,7 @@ export function GameStage({ config, onExit }: GameStageProps) {
             </span>
             <div className="sp-brand-text">
               <span className="sp-eyebrow">SPLENDOR · GRAND EXCHANGE</span>
-              <h2>璀璨宝石</h2>
+              <h2>璀璨宝石 <span className="sp-table-strength" title={aiLevel.description}>{aiLevel.label} AI</span></h2>
             </div>
           </div>
           <div className="sp-turn-banner" data-thinking={aiThinking} data-finished={view.phase === 'finished'}>
@@ -306,7 +312,7 @@ export function GameStage({ config, onExit }: GameStageProps) {
               <div className="sp-side-heading">
                 <SeatSigil seat={inspectedSeat} small />
                 <div><h3>{PLAYER_NAMES[inspectedSeat]}</h3>
-                  <small>{inspectedSeat === config.humanSeat ? '真人席位' : 'AI 商会'}</small></div>
+                  <small>{inspectedSeat === config.humanSeat ? '真人席位' : aiLevel.label + ' AI 商会'}</small></div>
                 <span className="sp-side-vp"><b>{viewer.points}</b><small>VP</small></span>
               </div>
               <div className="sp-portfolio-label">永久折扣 <small>点亮发展卡</small></div>
@@ -352,13 +358,15 @@ export function GameStage({ config, onExit }: GameStageProps) {
             </section>
 
             <section className="sp-side-section sp-side-ai">
-              <div className="sp-side-heading"><div><span className="sp-eyebrow">STRATEGY DESK</span><h3>AI 决策观察</h3></div></div>
+              <div className="sp-side-heading"><div><span className="sp-eyebrow">STRATEGY DESK</span><h3>AI 决策观察</h3></div>
+                <span className="sp-ai-level" title={aiLevel.description}>{aiLevel.label}</span>
+              </div>
               {snap.ai && snap.status !== 'finished' ? (
                 <>
                   <p className="sp-ai-goal">{snap.ai.goal}</p>
                   <div className="sp-ai-candidates">
-                    {snap.ai.candidates.map((candidate, index) => (
-                      <div className="sp-ai-candidate" key={moveKey(candidate.move)} data-best={index === 0}>
+                    {snap.ai.candidates.slice(0, 5).map((candidate, index) => (
+                      <div className="sp-ai-candidate" key={moveKey(candidate.move) + '-' + index} data-best={index === 0}>
                         <span className="sp-ai-rank">{String(index + 1).padStart(2, '0')}</span>
                         <span className="sp-ai-choice"><b>{describeMove(snap.state, candidate.move)}</b>
                           <small>{candidate.reason}</small></span>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { DEVELOPMENT_CARDS } from '../engine/cards';
 import { classicRulesFor, RULE_LIMITS } from '../engine/config';
+import { AI_LEVELS, DEFAULT_AI_STRENGTH } from '../engine/ai/levels';
 import { PLAYER_NAMES } from '../engine/board';
-import type { GameConfig, GameRules } from '../engine/types';
+import type { AiStrength, GameConfig, GameRules } from '../engine/types';
 import { DevelopmentCardView } from './DevelopmentCardView';
 import { GemToken } from './GemToken';
 
@@ -48,10 +49,15 @@ function RuleSetting({ item, value, classic, onChange }: RuleSettingProps) {
   );
 }
 
-/** 复古珠宝商会的开局页：选人数、观赛或亲自入局、节奏与洗牌种子。 */
+/**
+ * 珠宝商会开局页：选择人数、席位、AI 强度与本局规则。
+ * @param props 开局回调，接收所选强度与完整对局配置
+ * @returns 支持键盘操作的开局配置界面
+ */
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [count, setCount] = useState<2 | 3 | 4>(3);
   const [human, setHuman] = useState(false);
+  const [strength, setStrength] = useState<AiStrength>(DEFAULT_AI_STRENGTH);
   const [humanSeat, setHumanSeat] = useState(0);
   const [delay, setDelay] = useState(1000);
   const [seedText, setSeedText] = useState(() => String(Date.now() >>> 0));
@@ -77,6 +83,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     const parsed = Number(seedText);
     onStart({
       playerCount: count,
+      aiStrength: strength,
       humanSeat: human ? humanSeat : null,
       turnDelayMs: delay,
       rules,
@@ -123,6 +130,28 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               </button>
             </div>
           </div>
+          <fieldset className="sp-strength-field">
+            <legend>算法强度</legend>
+            <div className="sp-strength-choices">
+              {AI_LEVELS.map((level) => (
+                <label key={level.id} className="sp-strength-option" data-active={strength === level.id}>
+                  <input type="radio" name="sp-ai-strength" value={level.id}
+                    checked={strength === level.id} onChange={() => setStrength(level.id)}
+                    aria-labelledby={'sp-strength-' + level.id + '-label'}
+                    aria-describedby={'sp-strength-' + level.id + '-description'} />
+                  <span className="sp-strength-body">
+                    <span className="sp-strength-heading">
+                      <strong id={'sp-strength-' + level.id + '-label'}>{level.label}</strong>
+                      {level.id === DEFAULT_AI_STRENGTH ? <small>推荐</small> : null}
+                    </span>
+                    <span id={'sp-strength-' + level.id + '-description'}
+                      className="sp-strength-description">{level.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="sp-field-hint">应用于本局全部 AI 商会，重开保留。较高档位会多花一些时间规划。</p>
+          </fieldset>
           {human ? (
             <div className="sp-field">
               <div className="sp-field-title"><span>我的商会席位</span><b>{PLAYER_NAMES[humanSeat]}</b></div>

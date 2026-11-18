@@ -526,6 +526,31 @@ button.sp-gem:not(:disabled):hover .sp-gem-svg { transform: translateY(-3px); fi
 .sp-mode-choices button { padding: 12px 10px; text-align: left; display: flex; flex-direction: column; gap: 5px; }
 .sp-mode-choices b { font-size: 12px; }
 .sp-mode-choices small { font-size: 10px; line-height: 1.7; }
+/* 算法强度使用原生单选框，键盘方向键与读屏分组直接沿用浏览器行为。 */
+.sp-strength-field { min-width: 0; margin: 15px 0 0; padding: 0 0 15px; border: 0; border-bottom: 1px solid var(--sp-faint-line); }
+.sp-strength-field legend { padding: 0; margin-bottom: 9px; color: var(--sp-text); font-weight: 700; }
+.sp-strength-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sp-strength-option { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 10px;
+  cursor: pointer; border: 1px solid var(--sp-faint-line); border-radius: 8px; background: var(--sp-bg);
+  transition: background .2s, border-color .2s; }
+.sp-strength-option:hover { border-color: var(--sp-line); }
+.sp-strength-option[data-active='true'] { border-color: var(--sp-gold); background: var(--sp-paper-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sp-gold) 20%, transparent); }
+.sp-strength-option:has(input:focus-visible) { outline: 2px solid var(--sp-gold); outline-offset: 3px; }
+.sp-strength-option input { width: 14px; height: 14px; margin: 3px 0 0; accent-color: var(--sp-gold); flex: none; }
+.sp-strength-body { min-width: 0; display: grid; gap: 4px; }
+.sp-strength-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.sp-strength-heading strong { color: var(--sp-text); font-size: 12px; }
+.sp-strength-option[data-active='true'] strong { color: var(--sp-gold); }
+.sp-strength-heading small { color: var(--sp-gold); font-size: 9px; padding: 0 5px; border: 1px solid var(--sp-faint-line); border-radius: 4px; }
+.sp-strength-description { color: var(--sp-muted); font-size: 11px; line-height: 1.65; }
+.sp-strength-field .sp-field-hint { margin-top: 8px; }
+.sp-table-strength, .sp-ai-level { display: inline-flex; align-items: center; color: var(--sp-gold);
+  background: var(--sp-paper-soft); border: 1px solid var(--sp-faint-line); border-radius: 5px;
+  padding: 2px 7px; font-size: 10px; font-weight: 600; line-height: 1.5; white-space: nowrap; }
+.sp-table-strength { vertical-align: middle; margin-left: 5px; letter-spacing: 0; }
+.sp-ai-level { margin-left: auto; }
+
 .sp-field input[type='range'] { width: 100%; accent-color: var(--sp-gold); }
 .sp-field-hint { color: var(--sp-subtle); font-size: 10px; margin-top: 4px; }
 .sp-seed-row { display: flex; gap: 9px; }
@@ -585,6 +610,12 @@ button.sp-gem:not(:disabled):hover .sp-gem-svg { transform: translateY(-3px); fi
   .sp-seat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sp-lower-board { grid-template-columns: 1fr; }
   .sp-nobles-row { justify-content: center; }
+}
+@media (max-width: 900px) {
+  .sp-setup-layout { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
+}
+@media (max-width: 420px) {
+  .sp-strength-choices { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .sp-table-header { flex-wrap: wrap; }

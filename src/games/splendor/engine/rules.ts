@@ -20,9 +20,8 @@ export function bonusesOf(player: Player): Gems {
   return bonuses;
 }
 
-/** 返回购卡的最小真实筹码支付方案；无力支付时返回 null。 */
-export function paymentFor(card: DevelopmentCard, player: Player): Tokens | null {
-  const discounts = bonusesOf(player);
+/** 一次合法动作枚举共用折扣，避免为市场里的每张牌重新扫描已购卡。 */
+function paymentWithDiscounts(card: DevelopmentCard, player: Player, discounts: Gems): Tokens | null {
   const payment = emptyTokens();
   for (const color of GEM_COLORS) {
     const due = Math.max(0, card.cost[color] - discounts[color]);
@@ -30,6 +29,16 @@ export function paymentFor(card: DevelopmentCard, player: Player): Tokens | null
     payment.gold += due - payment[color];
   }
   return payment.gold <= player.tokens.gold ? payment : null;
+}
+
+/**
+ * 返回优先使用普通宝石、再以黄金补足的最小支付方案。
+ * @param card 待购买的发展卡
+ * @param player 买方当前持仓
+ * @returns 五色与黄金支付数量；无力支付时返回 null
+ */
+export function paymentFor(card: DevelopmentCard, player: Player): Tokens | null {
+  return paymentWithDiscounts(card, player, bonusesOf(player));
 }
 
 /** 不修改输入，克隆一局比赛的全部可变容器。卡牌定义本身是只读值。 */
@@ -95,10 +104,15 @@ export function takeColorChoices(bank: Tokens): GemColor[][] {
   return choices;
 }
 
-/** 罗列当前行动方的全部基础合法动作（超额筹码退还可由动作附带选择）。 */
+/**
+ * 罗列当前行动方的全部基础合法动作，退筹与贵族选择可由动作附带指定。
+ * @param state 当前局面
+ * @returns 按固定顺序枚举的合法动作，已结束时为空数组
+ */
 export function getLegalMoves(state: GameState): Move[] {
   if (state.phase === 'finished') return [];
   const player = state.players[state.current];
+  const discounts = bonusesOf(player);
   const moves: Move[] = [];
   for (const colors of takeColorChoices(state.bank)) moves.push({ kind: 'take', colors });
   for (const color of GEM_COLORS) {
@@ -108,7 +122,7 @@ export function getLegalMoves(state: GameState): Move[] {
   for (let tierIndex = 0; tierIndex < 3; tierIndex += 1) {
     const tier = (tierIndex + 1) as Tier;
     state.market[tierIndex].forEach((card, slot) => {
-      if (card !== null && paymentFor(card, player)) {
+      if (card !== null && paymentWithDiscounts(card, player, discounts)) {
         moves.push({ kind: 'buy', source: 'market', tier, slot });
       }
       if (card !== null && player.reserved.length < state.rules.reserveLimit) {
@@ -120,7 +134,7 @@ export function getLegalMoves(state: GameState): Move[] {
     }
   }
   player.reserved.forEach((card, slot) => {
-    if (paymentFor(card, player)) moves.push({ kind: 'buy', source: 'reserved', slot });
+    if (paymentWithDiscounts(card, player, discounts)) moves.push({ kind: 'buy', source: 'reserved', slot });
   });
   // 极端局面下若无合法行动，允许跳过，防止 AI 会话无法推进。
   if (moves.length === 0) moves.push({ kind: 'pass' });
@@ -140,19 +154,26 @@ export function moveKey(move: Move): string {
 
 /** 自动选择多余筹码：优先保留黄金及靠近可见购卡需求的宝石。 */
 function automaticReturns(state: GameState, player: Player, count: number): TokenColor[] {
+  if (count === 0) return [];
   const discounts = bonusesOf(player);
   const targets = [
     ...state.market.flatMap((row) => row.filter((card): card is DevelopmentCard => card !== null)),
     ...player.reserved,
   ];
+  const working = { ...player.tokens };
+  const demands = emptyGems();
+  for (const card of targets) {
+    for (const color of GEM_COLORS) {
+      demands[color] = Math.max(demands[color], card.cost[color] - discounts[color]);
+    }
+  }
   const relevance = (color: TokenColor): number => {
     if (color === 'gold') return 100;
-    const needs = targets.map((card) => Math.max(0, card.cost[color] - discounts[color]));
-    const best = Math.max(0, ...needs.map((need) => Math.min(need, player.tokens[color])));
-    return best * 4 - Math.max(0, player.tokens[color] - best) * 3;
+    const best = Math.min(demands[color], working[color]);
+    // 每退一枚都重算余下持仓，不能继续按退筹前的数量决定下一枚。
+    return best * 4 - Math.max(0, working[color] - best) * 3;
   };
   const returns: TokenColor[] = [];
-  const working = { ...player.tokens };
   for (let i = 0; i < count; i += 1) {
     const candidates: TokenColor[] = [...GEM_COLORS, 'gold'];
     candidates.sort((a, b) => relevance(a) - relevance(b) || working[b] - working[a]);
@@ -169,6 +190,7 @@ function settleTokenLimit(state: GameState, player: Player, requested?: TokenCol
   const excess = Math.max(0, tokenCount(player.tokens) - state.rules.tokenLimit);
   const returns = requested ?? automaticReturns(state, player, excess);
   if (returns.length !== excess) throw new Error('退回筹码数量不符合 ' + state.rules.tokenLimit + ' 枚上限');
+  if (excess === 0) return returns;
   const available = { ...player.tokens };
   for (const color of returns) {
     if (!(color in available) || available[color] <= 0) throw new Error('无法退回未持有的筹码');
@@ -194,18 +216,34 @@ export function determineWinners(players: Player[]): number[] {
   return candidates.filter(({ player }) => player.cards.length === fewestCards).map(({ index }) => index);
 }
 
-/** 应用一项合法行动，产生新状态和详细中文事件；非法动作抛出错误。 */
-export function applyMove(state: GameState, move: Move): MoveResult {
-  if (!getLegalMoves(state).some((legal) => moveKey(legal) === moveKey(move))) {
-    throw new Error('当前回合不允许此行动：' + moveKey(move));
-  }
-  const next = cloneState(state);
-  const seat = next.current;
-  const player = next.players[seat];
-  const events: GameEvent[] = [];
-  const event = (kind: GameEvent['kind'], text: string) => {
-    events.push({ player: seat, kind, text, turn: state.turn + 1 });
+/** 取走公开牌并补市场；只复制发生变化的这一阶市场与牌堆。 */
+function removeMarketCard(state: GameState, tierIndex: number, slot: number): DevelopmentCard {
+  const card = state.market[tierIndex][slot];
+  if (!card) throw new Error('目标发展卡不存在');
+  const deck = state.decks[tierIndex];
+  state.market = [...state.market] as GameState['market'];
+  state.market[tierIndex] = [...state.market[tierIndex]];
+  state.market[tierIndex][slot] = deck[0] ?? null;
+  state.decks = [...state.decks] as GameState['decks'];
+  state.decks[tierIndex] = deck.slice(1);
+  return card;
+}
+
+/** 正式对局和搜索共享结算；无 events 时不创建事件对象或中文描述。 */
+function applyMoveCore(state: GameState, move: Move, events?: GameEvent[]): GameState {
+  const seat = state.current;
+  const original = state.players[seat];
+  // 未行动玩家、卡牌定义与未改变的容器只读共享；各写入点再复制相应数组。
+  const player: Player = { ...original, tokens: { ...original.tokens } };
+  const next: GameState = {
+    ...state,
+    players: [...state.players],
+    bank: { ...state.bank },
   };
+  next.players[seat] = player;
+  const event = events && ((kind: GameEvent['kind'], text: string) => {
+    events.push({ player: seat, kind, text, turn: state.turn + 1 });
+  });
   let requestedReturns: TokenColor[] | undefined;
   switch (move.kind) {
     case 'take': {
@@ -214,29 +252,36 @@ export function applyMove(state: GameState, move: Move): MoveResult {
         next.bank[color] -= 1;
       }
       requestedReturns = move.returns;
-      event('take', '领取 ' + move.colors.map((color) => GEM_NAMES[color]).join('、'));
+      event?.('take', '领取 ' + move.colors.map((color) => GEM_NAMES[color]).join('、'));
       break;
     }
     case 'double': {
       player.tokens[move.color] += 2;
       next.bank[move.color] -= 2;
       requestedReturns = move.returns;
-      event('double', '领取 2 枚' + GEM_NAMES[move.color]);
+      event?.('double', '领取 2 枚' + GEM_NAMES[move.color]);
       break;
     }
     case 'reserve': {
       const index = move.tier - 1;
-      const [card] = move.slot === null
-        ? next.decks[index].splice(0, 1)
-        : next.market[index].splice(move.slot, 1, next.decks[index].shift() ?? null);
-      if (!card) throw new Error('目标发展卡不存在');
-      player.reserved.push(card);
+      let card: DevelopmentCard;
+      if (move.slot === null) {
+        const top = next.decks[index][0];
+        if (!top) throw new Error('目标发展卡不存在');
+        card = top;
+        next.decks = [...next.decks] as GameState['decks'];
+        next.decks[index] = next.decks[index].slice(1);
+      } else {
+        card = removeMarketCard(next, index, move.slot);
+      }
+      player.reserved = [...player.reserved, card];
       if (next.bank.gold > 0) {
         next.bank.gold -= 1;
         player.tokens.gold += 1;
       }
       requestedReturns = move.returns;
-      event('reserve', '预留 ' + move.tier + ' 阶发展卡' + (next.bank.gold >= 0 && player.tokens.gold > state.players[seat].tokens.gold ? '，获得 1 枚黄金' : ''));
+      event?.('reserve', '预留 ' + move.tier + ' 阶发展卡' +
+        (player.tokens.gold > original.tokens.gold ? '，获得 1 枚黄金' : ''));
       break;
     }
     case 'buy': {
@@ -246,29 +291,32 @@ export function applyMove(state: GameState, move: Move): MoveResult {
       if (!card) throw new Error('待购买发展卡不存在');
       const payment = paymentFor(card, player);
       if (!payment) throw new Error('筹码不足');
-      for (const color of [...GEM_COLORS, 'gold'] as TokenColor[]) {
+      for (const color of GEM_COLORS) {
         player.tokens[color] -= payment[color];
         next.bank[color] += payment[color];
       }
+      player.tokens.gold -= payment.gold;
+      next.bank.gold += payment.gold;
       if (move.source === 'market') {
-        next.market[move.tier - 1].splice(move.slot, 1, next.decks[move.tier - 1].shift() ?? null);
+        removeMarketCard(next, move.tier - 1, move.slot);
       } else {
+        player.reserved = [...player.reserved];
         player.reserved.splice(move.slot, 1);
       }
-      player.cards.push(card);
+      player.cards = [...player.cards, card];
       player.points += card.points;
-      event('buy', '购入 ' + card.tier + ' 阶' + GEM_NAMES[card.bonus] + '工坊' +
+      event?.('buy', '购入 ' + card.tier + ' 阶' + GEM_NAMES[card.bonus] + '工坊' +
         (card.points ? '，获得 ' + card.points + ' 声望' : '，永久折扣 +1'));
       break;
     }
     case 'pass':
-      event('pass', '没有可执行的行动，跳过本回合');
+      event?.('pass', '没有可执行的行动，跳过本回合');
       break;
   }
   if (move.kind === 'take' || move.kind === 'double' || move.kind === 'reserve') {
     const returned = settleTokenLimit(next, player, requestedReturns);
-    if (returned.length) event('discard', '超过 ' + next.rules.tokenLimit + ' 枚上限，归还 ' + returned.map((color) =>
-      color === 'gold' ? '黄金' : GEM_NAMES[color]).join('、'));
+    if (returned.length) event?.('discard', '超过 ' + next.rules.tokenLimit + ' 枚上限，归还 ' +
+      returned.map((color) => color === 'gold' ? '黄金' : GEM_NAMES[color]).join('、'));
   }
 
   const visitors = eligibleNobles(next, player);
@@ -276,27 +324,46 @@ export function applyMove(state: GameState, move: Move): MoveResult {
     const chosenId = move.kind === 'buy' ? move.nobleId : undefined;
     const chosen = chosenId === undefined ? visitors[0] : visitors.find((noble) => noble.id === chosenId);
     if (!chosen) throw new Error('指定的贵族尚未达到拜访条件');
-    next.nobles.splice(next.nobles.findIndex((noble) => noble.id === chosen.id), 1);
-    player.nobles.push(chosen);
+    next.nobles = next.nobles.filter((noble) => noble.id !== chosen.id);
+    player.nobles = [...player.nobles, chosen];
     player.points += chosen.points;
-    event('noble', '贵族 ' + chosen.id + ' 到访，额外获得 3 声望');
+    event?.('noble', '贵族 ' + chosen.id + ' 到访，额外获得 3 声望');
   }
 
   if (player.points >= next.rules.victoryPoints && !next.finalRound) {
     next.finalRound = true;
-    event('finish', '达到 ' + next.rules.victoryPoints + ' 声望！本轮所有人走完后结算');
+    event?.('finish', '达到 ' + next.rules.victoryPoints + ' 声望！本轮所有人走完后结算');
   }
   next.turn += 1;
   next.current = (seat + 1) % next.players.length;
   if (next.finalRound && next.current === 0) {
     next.phase = 'finished';
     next.winners = determineWinners(next.players);
-    event('finish', '本局结束 · ' + next.winners.map((index) => PLAYER_NAMES[index]).join('、') + ' 获胜');
+    event?.('finish', '本局结束 · ' + next.winners.map((index) => PLAYER_NAMES[index]).join('、') + ' 获胜');
   }
-  return { state: next, events };
+  return next;
 }
 
-/** 仅推进游戏局面，供 AI 和批量模拟使用。 */
+/**
+ * 校验并应用行动，产生新状态和详细中文事件；非法动作抛出错误。
+ * @param state 行动前的局面
+ * @param move 选定的动作，允许附带合法退筹与贵族选择
+ * @returns 新局面及事件，未改变的内部容器按不可变契约只读共享
+ */
+export function applyMove(state: GameState, move: Move): MoveResult {
+  if (!getLegalMoves(state).some((legal) => moveKey(legal) === moveKey(move))) {
+    throw new Error('当前回合不允许此行动：' + moveKey(move));
+  }
+  const events: GameEvent[] = [];
+  return { state: applyMoveCore(state, move, events), events };
+}
+
+/**
+ * 推进已经枚举为合法的行动，省去重复合法枚举与事件分配。
+ * @param state 行动前的局面
+ * @param move 来自 getLegalMoves 的合法动作及有效的退筹、贵族选择
+ * @returns 不修改输入的新局面；外部用户输入应通过 applyMove 校验
+ */
 export function applyMoveState(state: GameState, move: Move): GameState {
-  return applyMove(state, move).state;
+  return applyMoveCore(state, move);
 }

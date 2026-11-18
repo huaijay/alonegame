@@ -49,7 +49,12 @@ export interface GameRules {
   doubleTakeMinimum: number;
 }
 
+/** AI 档位决定本局所有电脑商会的规划强度，真人席位不受影响。 */
+export type AiStrength = 'easy' | 'normal' | 'hard' | 'expert';
+
 export interface GameConfig {
+  /** 本局固定的 AI 强度；未指定时采用标准档。 */
+  aiStrength?: AiStrength;
   playerCount: 2 | 3 | 4;
   seed: number;
   turnDelayMs: number;
